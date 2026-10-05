@@ -175,7 +175,7 @@ class WifiAdbTest {
         // Agora inicia o serviço do Sv Booster (o mesmo do botão "Começar pareamento").
         PairingService.start(ctx)
         Thread.sleep(1500)
-        closeShade()
+        // (não mexe na tela aqui: a janela de pareamento precisa continuar aberta, como no celular real)
         // O serviço tem que achar a porta sozinho (mDNS)…
         var w = 0
         while (!PairingService.status.contains("encontrado") && w < 20) { Thread.sleep(500); w++ }
@@ -183,6 +183,7 @@ class WifiAdbTest {
         shot("w3_notificacao_encontrou.png")
         assertTrue("o app não achou o pareamento sozinho: ${PairingService.status}", PairingService.status.contains("encontrado"))
 
+        Log.i("SvTest", "janela de pareamento ainda aberta? ${device.hasObject(By.textContains("pairing code"))}")
         // …e o código é "digitado" na notificação (mesma Intent que a resposta da notificação envia).
         val reply = Intent(ctx, PairingService::class.java).setAction(PairingService.ACTION_CODE)
         RemoteInput.addResultsToIntent(
