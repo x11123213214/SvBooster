@@ -23,6 +23,8 @@ data class GameProfile(
     val hud: Boolean = false,
     val crosshair: Boolean = false,
     val forceGlobal: Boolean = false, // resolução da tela inteira enquanto o jogo está aberto
+    val focusMode: Boolean = true,     // fecha todos os outros apps durante o jogo
+    val maxPerformance: Boolean = false, // processador no desempenho máximo durante o jogo
 ) {
     fun toJson(): String = JSONObject()
         .put("downscale", downscale.toDouble())
@@ -35,6 +37,9 @@ data class GameProfile(
         .put("hud", hud)
         .put("cross", crosshair)
         .put("force", forceGlobal)
+        .put("focus", focusMode)
+        .put("perf", maxPerformance)
+        .put("v", 2)
         .toString()
 
     companion object {
@@ -44,7 +49,8 @@ data class GameProfile(
                 val o = JSONObject(s)
                 GameProfile(
                     downscale = o.optDouble("downscale", 1.0).toFloat(),
-                    fps = o.optInt("fps", 0),
+                    // Versão 2: sem limite de FPS por padrão (perfis antigos tinham 30/60 FPS travados).
+                    fps = if (o.optInt("v", 1) >= 2) o.optInt("fps", 0) else 0,
                     mode = o.optInt("mode", 2),
                     killBackground = o.optBoolean("kill", true),
                     dnd = o.optBoolean("dnd", false),
@@ -53,6 +59,8 @@ data class GameProfile(
                     hud = o.optBoolean("hud", false),
                     crosshair = o.optBoolean("cross", false),
                     forceGlobal = o.optBoolean("force", false),
+                    focusMode = o.optBoolean("focus", true),
+                    maxPerformance = o.optBoolean("perf", false),
                 )
             } catch (e: Exception) {
                 GameProfile()
@@ -83,6 +91,9 @@ object Prefs {
         sp(ctx).getString("anim_saved", null)?.split(";")?.takeIf { it.size == 3 }
     fun saveAnim(ctx: Context, v: List<String>) = sp(ctx).edit().putString("anim_saved", v.joinToString(";")).apply()
     fun clearAnim(ctx: Context) = sp(ctx).edit().remove("anim_saved").apply()
+
+    fun perfOn(ctx: Context) = sp(ctx).getBoolean("perf_on", false)
+    fun setPerfOn(ctx: Context, on: Boolean) = sp(ctx).edit().putBoolean("perf_on", on).apply()
 
     fun maxHzOn(ctx: Context) = sp(ctx).getBoolean("max_hz", false)
     fun setMaxHz(ctx: Context, on: Boolean) = sp(ctx).edit().putBoolean("max_hz", on).apply()

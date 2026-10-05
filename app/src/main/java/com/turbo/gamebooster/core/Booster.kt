@@ -55,8 +55,8 @@ object Booster {
                 log("⚠ Modo Turbo não respondeu: ${t.err.ifBlank { t.out }.take(120)}")
                 log("Abra Ajustes → Modo Turbo → Conectar agora")
             }
-        } else if (p.downscale < 1f || p.fps > 0 || p.noAnimations || p.maxRefresh) {
-            log("⚠ Modo Turbo desativado: resolução, FPS, animações e Hz foram pulados (ative em Ajustes)")
+        } else {
+            log("⚠ Modo Turbo desativado: resolução, foco total e desempenho foram pulados (ative em Ajustes)")
         }
 
         if (p.killBackground) {
@@ -90,6 +90,13 @@ object Booster {
             } else if (Prefs.globalScale(ctx) < 0.99f) {
                 Tweaks.resetGlobalResolution(ctx)
             }
+
+            if (p.focusMode) {
+                val n = Focus.closeOthers(ctx, keep = pkg)
+                log(if (n >= 0) "Foco total: $n apps fechados, o celular fica só para o jogo" else "Foco total: ${Tweaks.lastError}")
+            }
+            if (p.maxPerformance) log(if (Tweaks.setMaxPerformance(ctx, true)) "Desempenho máximo ligado (sem economia de energia)" else "Desempenho: ${Tweaks.lastError}")
+            watch = pkg // quando sair do jogo, tudo volta ao normal sozinho
 
             if (p.noAnimations) log(if (Tweaks.disableAnimations(ctx)) "Animações desligadas" else "Animações: ${Tweaks.lastError}")
             if (p.maxRefresh) log(if (Tweaks.setMaxRefresh(ctx, true)) "Tela em ${Tweaks.maxRefreshRate(ctx).roundToInt()} Hz" else "Hz: ${Tweaks.lastError}")
@@ -285,6 +292,33 @@ object Tweaks {
         }.maxOrNull()
     }
 
+    /**
+     * Desempenho máximo: modo de performance fixa do Android, desliga a economia de energia e
+     * avisa aos jogos que o celular está frio (para eles não baixarem a qualidade sozinhos).
+     * A proteção de temperatura do próprio hardware continua funcionando.
+     */
+    suspend fun setMaxPerformance(ctx: Context, on: Boolean): Boolean {
+        if (!Shell.hasShell()) return false
+        val cmds = if (on) listOf(
+            "cmd power set-fixed-performance-mode-enabled true",
+            "settings put global low_power 0",
+            "cmd power set-adaptive-power-saver-enabled false",
+            "cmd thermalservice override-status 0",
+        ) else listOf(
+            "cmd power set-fixed-performance-mode-enabled false",
+            "cmd power set-adaptive-power-saver-enabled true",
+            "cmd thermalservice reset",
+        )
+        var okCount = 0
+        var last: Shell.Result? = null
+        for (c in cmds) {
+            val r = Shell.run(c, timeoutMs = 6000)
+            if (r.ok && !r.out.contains("Unknown", true) && !r.out.contains("Exception")) okCount++ else last = r
+        }
+        if (okCount > 0) Prefs.setPerfOn(ctx, on) else last?.let { fail(it) }
+        return okCount > 0
+    }
+
     /** Pacote do app que está na tela agora (via shell). */
     suspend fun topPackage(): String? {
         val out = Shell.run(
@@ -301,9 +335,28 @@ object Tweaks {
             if (Prefs.savedAnim(ctx) != null && restoreAnimations(ctx)) out += "Animações restauradas"
             if (Prefs.maxHzOn(ctx) && setMaxRefresh(ctx, false)) out += "Taxa de tela automática"
             if (Prefs.globalScale(ctx) < 0.99f && resetGlobalResolution(ctx)) out += "Resolução da tela restaurada"
+            if (Prefs.perfOn(ctx) && setMaxPerformance(ctx, false)) out += "Desempenho normal"
         }
         if (out.isEmpty()) out += "Nada para restaurar"
         return out
+    }
+}
+
+/** Foco total: fecha todos os outros apps para o jogo ter o celular só para ele. */
+object Focus {
+    // Nunca fechar: relógio/alarme, telefone, teclado, tela inicial, o próprio app e serviços do sistema.
+    private val NEVER = listOf("clock", "alarm", "dialer", "incallui", "telecom", "contacts", "shizuku", "launcher", "inputmethod", "keyboard", "systemui")
+
+    suspend fun closeOthers(ctx: Context, keep: String): Int {
+        val pm = ctx.packageManager
+        val home = pm.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0)?.activityInfo?.packageName
+        val ime = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)?.substringBefore('/')
+        val keepSet = setOfNotNull(keep, ctx.packageName, home, ime, "com.android.settings", "com.android.phone")
+        val targets = AppRepo.launchableApps(ctx).map { it.pkg }
+            .filter { it !in keepSet && NEVER.none { n -> it.contains(n, ignoreCase = true) } }
+        if (targets.isEmpty()) return 0
+        val r = Shell.run(*targets.map { "am force-stop $it" }.toTypedArray(), timeoutMs = 30_000)
+        return if (r.code == -1 || r.code == -2) { Tweaks.lastError = r.err.take(150); -1 } else targets.size
     }
 }
 

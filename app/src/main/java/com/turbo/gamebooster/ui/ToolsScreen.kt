@@ -30,12 +30,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -63,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.turbo.gamebooster.core.Cleaner
+import com.turbo.gamebooster.core.DeepClean
 import com.turbo.gamebooster.core.Ping
 import com.turbo.gamebooster.core.Prefs
 import com.turbo.gamebooster.core.Tweaks
@@ -129,6 +132,66 @@ fun ToolsScreen(mode: Shell.Mode) {
             cleanMsg?.let { Spacer(Modifier.height(6.dp)); Text(it, color = Neon) }
         }
 
+        // ---- Limpeza completa
+        var scanning by remember { mutableStateOf(false) }
+        var cats by remember { mutableStateOf<List<DeepClean.Category>?>(null) }
+        var chosen by remember { mutableStateOf(setOf<String>()) }
+        var deepMsg by remember { mutableStateOf<String?>(null) }
+        SectionCard("Limpeza completa", Icons.Filled.DeleteSweep) {
+            Hint("Apaga tudo que não é importante: cache, miniaturas, instaladores .apk, logs e temporários. Fotos, vídeos, músicas, documentos e jogos nunca são apagados.")
+            Spacer(Modifier.height(10.dp))
+            val list = cats
+            if (list == null) {
+                OutlinedButton(
+                    onClick = {
+                        scanning = true; deepMsg = null
+                        scope.launch {
+                            val r = DeepClean.scan(ctx)
+                            cats = r; chosen = r.map { it.id }.toSet(); scanning = false
+                        }
+                    },
+                    enabled = !scanning, modifier = Modifier.fillMaxWidth()
+                ) { Text(if (scanning) "Analisando…" else "Analisar o celular") }
+                if (!hasShell) Hint("Sem o Modo Turbo dá para limpar menos coisas (o cache dos apps precisa dele).")
+            } else {
+                list.forEach { c ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { chosen = if (c.id in chosen) chosen - c.id else chosen + c.id }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Checkbox(checked = c.id in chosen, onCheckedChange = { chosen = if (it) chosen + c.id else chosen - c.id })
+                        Column(Modifier.weight(1f)) {
+                            Text(c.name, fontWeight = FontWeight.SemiBold)
+                            Hint(c.desc + if (c.files.isNotEmpty()) " (${c.files.size} arquivos)" else "")
+                        }
+                        Text(DeepClean.fmt(c.sizeBytes), color = Neon, fontWeight = FontWeight.Bold)
+                    }
+                }
+                val total = list.filter { it.id in chosen }.sumOf { it.sizeBytes.coerceAtLeast(0) }
+                Spacer(Modifier.height(6.dp))
+                Button(
+                    onClick = {
+                        scanning = true
+                        scope.launch {
+                            val freed = DeepClean.clean(ctx, list.filter { it.id in chosen })
+                            deepMsg = "Pronto! ${DeepClean.fmt(freed)} liberados ✓"
+                            cats = null; scanning = false
+                        }
+                    },
+                    enabled = !scanning && chosen.isNotEmpty(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Neon, contentColor = Color.Black),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (scanning) CircularProgressIndicator(Modifier.size(18.dp), color = Color.Black, strokeWidth = 2.dp)
+                    else Text("Limpar ${DeepClean.fmt(total)}+", fontWeight = FontWeight.Bold)
+                }
+            }
+            deepMsg?.let { Spacer(Modifier.height(6.dp)); Text(it, color = Neon, fontWeight = FontWeight.Bold) }
+        }
+
         // ---- Ping
         val results = remember { mutableStateMapOf<String, Ping.Res?>() }
         var pinging by remember { mutableStateOf(false) }
@@ -185,7 +248,7 @@ fun ToolsScreen(mode: Shell.Mode) {
             )
             Slider(
                 value = scale, onValueChange = { scale = (it * 20).roundToInt() / 20f },
-                valueRange = 0.5f..1f, steps = 9, enabled = hasShell
+                valueRange = 0.25f..1f, steps = 14, enabled = hasShell
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(

@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.AddToHomeScreen
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.CenterFocusWeak
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.DoNotDisturbOn
 import androidx.compose.material.icons.filled.Eco
@@ -105,15 +106,15 @@ import kotlin.math.roundToInt
 data class TurboLevel(val name: String, val desc: String, val icon: ImageVector, val color: Color, val p: GameProfile)
 
 val LEVELS = listOf(
-    TurboLevel("Leve", "90% · 60 FPS", Icons.Filled.Eco, Cyan, GameProfile(downscale = 0.9f, fps = 60, mode = 2)),
-    TurboLevel("Equilibrado", "75% · 60 FPS", Icons.Filled.Balance, Neon, GameProfile(downscale = 0.75f, fps = 60, mode = 2)),
+    TurboLevel("Leve", "85% · FPS livre", Icons.Filled.Eco, Cyan, GameProfile(downscale = 0.85f, fps = 0, mode = 2)),
+    TurboLevel("Equilibrado", "70% · FPS livre", Icons.Filled.Balance, Neon, GameProfile(downscale = 0.7f, fps = 0, mode = 2, maxRefresh = true)),
     TurboLevel(
-        "Máximo", "60% · FPS livre", Icons.Filled.LocalFireDepartment, Amber,
-        GameProfile(downscale = 0.6f, fps = 0, mode = 2, noAnimations = true, maxRefresh = true)
+        "Máximo", "50% · desempenho máx.", Icons.Filled.LocalFireDepartment, Amber,
+        GameProfile(downscale = 0.5f, fps = 0, mode = 2, noAnimations = true, maxRefresh = true, maxPerformance = true)
     ),
     TurboLevel(
-        "Celular fraco", "50% · 30 FPS", Icons.Filled.PhoneAndroid, Pink,
-        GameProfile(downscale = 0.5f, fps = 30, mode = 2, noAnimations = true)
+        "Ultra", "35% · celular fraco", Icons.Filled.PhoneAndroid, Pink,
+        GameProfile(downscale = 0.35f, fps = 0, mode = 2, noAnimations = true, maxRefresh = true, maxPerformance = true)
     ),
 )
 
@@ -349,7 +350,7 @@ fun PickerScreen(onDone: () -> Unit) {
 
 // ---------------- Perfil do jogo ----------------
 
-private val DOWNSCALE = listOf(1.0f, 0.9f, 0.8f, 0.75f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f)
+private val DOWNSCALE = listOf(1.0f, 0.9f, 0.85f, 0.8f, 0.75f, 0.7f, 0.6f, 0.5f, 0.4f, 0.35f, 0.3f, 0.25f)
 private val FPS = listOf(0, 30, 40, 45, 60, 90, 120)
 
 @Composable
@@ -454,7 +455,7 @@ fun ProfileScreen(pkg: String, mode: Shell.Mode, onSetup: () -> Unit, onBack: ()
                         LevelCard(lv, current == lv, hasShell, Modifier.weight(1f)) {
                             p = lv.p.copy(
                                 killBackground = p.killBackground, dnd = p.dnd, hud = p.hud,
-                                crosshair = p.crosshair, forceGlobal = p.forceGlobal
+                                crosshair = p.crosshair, forceGlobal = p.forceGlobal, focusMode = p.focusMode
                             )
                         }
                     }
@@ -468,9 +469,9 @@ fun ProfileScreen(pkg: String, mode: Shell.Mode, onSetup: () -> Unit, onBack: ()
                 QuickToggle(Icons.Filled.Visibility, "HUD", p.hud, modifier = Modifier.weight(1f)) { p = p.copy(hud = !p.hud) }
                 QuickToggle(Icons.Filled.CenterFocusStrong, "Mira", p.crosshair, modifier = Modifier.weight(1f)) { p = p.copy(crosshair = !p.crosshair) }
                 QuickToggle(Icons.Filled.DoNotDisturbOn, "Silêncio", p.dnd, modifier = Modifier.weight(1f)) { p = p.copy(dnd = !p.dnd) }
-                QuickToggle(Icons.Filled.CleaningServices, "Limpar", p.killBackground, modifier = Modifier.weight(1f)) { p = p.copy(killBackground = !p.killBackground) }
+                QuickToggle(Icons.Filled.CenterFocusWeak, "Foco total", p.focusMode, hasShell, Modifier.weight(1f)) { p = p.copy(focusMode = !p.focusMode) }
             }
-            Hint("A resolução baixa enquanto o jogo estiver aberto e volta ao normal sozinha quando você sair dele.")
+            Hint("Foco total fecha todos os outros apps (WhatsApp etc. voltam a notificar quando você abrir de novo; alarmes e ligações continuam). Ao sair do jogo, tudo volta ao normal sozinho.")
 
             // ---- Avançado
             Row(
@@ -510,7 +511,7 @@ fun ProfileScreen(pkg: String, mode: Shell.Mode, onSetup: () -> Unit, onBack: ()
                             FPS.forEach { f ->
                                 FilterChip(
                                     selected = p.fps == f, onClick = { p = p.copy(fps = f) }, enabled = hasShell,
-                                    label = { Text(if (f == 0) "Livre" else "$f") },
+                                    label = { Text(if (f == 0) "Livre (recomendado)" else "$f") },
                                     colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Neon, selectedLabelColor = Color.Black)
                                 )
                             }
@@ -527,6 +528,7 @@ fun ProfileScreen(pkg: String, mode: Shell.Mode, onSetup: () -> Unit, onBack: ()
                             }
                         }
                         ToggleRow("Limpar RAM antes", "Fecha apps em segundo plano", p.killBackground) { p = p.copy(killBackground = it) }
+                        ToggleRow("Desempenho máximo", "Processador no máximo e sem economia de energia (esquenta mais)", p.maxPerformance, hasShell, needShell) { p = p.copy(maxPerformance = it) }
                         ToggleRow("Desligar animações", "Menus instantâneos", p.noAnimations, hasShell, needShell) { p = p.copy(noAnimations = it) }
                         ToggleRow("Forçar Hz máximo", "Tela sempre em 90/120 Hz", p.maxRefresh, hasShell, needShell) { p = p.copy(maxRefresh = it) }
                     }

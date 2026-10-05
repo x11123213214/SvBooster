@@ -89,7 +89,7 @@ class OverlayService : Service() {
             ACTION_STOP -> {
                 if (watchJob != null) {
                     watchJob?.cancel()
-                    scope.launch { Tweaks.resetGlobalResolution(applicationContext); stopSelf() }
+                    scope.launch { Tweaks.restoreAll(applicationContext); stopSelf() }
                 } else stopSelf()
                 return START_NOT_STICKY
             }
@@ -129,7 +129,7 @@ class OverlayService : Service() {
                 val top = Tweaks.topPackage()
                 misses = if (top != null && top != pkg) misses + 1 else 0
                 if (misses >= 2) {
-                    Tweaks.resetGlobalResolution(applicationContext)
+                    Tweaks.restoreAll(applicationContext) // resolução, animações, Hz, desempenho e não perturbe
                     watchJob = null
                     if (views.isEmpty()) stopSelf()
                     break

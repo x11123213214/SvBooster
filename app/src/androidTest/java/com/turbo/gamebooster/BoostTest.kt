@@ -184,4 +184,63 @@ class BoostTest {
             shot("5_perfil_do_jogo.png")
         }
     }
+
+    @Test
+    fun t9_desempenhoMaximoLigaEVolta() {
+        val ok = runBlocking { withTimeout(30_000) { Tweaks.setMaxPerformance(ctx, true) } }
+        Log.i("SvTest", "desempenho: ok=$ok erro=${Tweaks.lastError} thermal=" + sh("dumpsys thermalservice | head -n 3").out.replace("\n", " "))
+        assertTrue("desempenho máximo falhou: ${Tweaks.lastError}", ok)
+        val off = runBlocking { withTimeout(30_000) { Tweaks.setMaxPerformance(ctx, false) } }
+        assertTrue("não voltou ao normal", off)
+    }
+
+    @Test
+    fun t10_limpezaCompletaApagaLixoENaoApagaArquivosDoUsuario() {
+        val root = "/sdcard"
+        sh(
+            "mkdir -p $root/DCIM/.thumbnails $root/Download $root/Android/data/com.android.chrome/cache; " +
+                "dd if=/dev/zero of=$root/DCIM/.thumbnails/thumb1.jpg bs=1024 count=512; " +
+                "dd if=/dev/zero of=$root/Download/instalador_velho.apk bs=1024 count=1024; " +
+                "dd if=/dev/zero of=$root/Download/erro.log bs=1024 count=64; " +
+                "dd if=/dev/zero of=$root/Android/data/com.android.chrome/cache/lixo.bin bs=1024 count=768; " +
+                "dd if=/dev/zero of=$root/Download/foto_importante.jpg bs=1024 count=100; " +
+                "dd if=/dev/zero of=$root/Download/trabalho.pdf bs=1024 count=100"
+        )
+        val cats = runBlocking { withTimeout(60_000) { com.turbo.gamebooster.core.DeepClean.scan(ctx) } }
+        Log.i("SvTest", "limpeza completa achou: " + cats.joinToString { "${it.id}=${it.sizeBytes}/${it.files.size}" })
+        val byId = cats.associateBy { it.id }
+        assertTrue("não achou miniaturas", (byId["thumbs"]?.sizeBytes ?: 0) >= 512 * 1024)
+        assertTrue("não achou o .apk", byId["apks"]?.files?.any { it.endsWith("instalador_velho.apk") } == true)
+        assertTrue("não achou o .log", byId["temps"]?.files?.any { it.endsWith("erro.log") } == true)
+        assertTrue("não achou cache externo", (byId["cache_ext"]?.sizeBytes ?: 0) >= 700 * 1024)
+        assertFalse("ia apagar a foto do usuário!", cats.any { c -> c.files.any { it.contains("foto_importante") || it.contains("trabalho.pdf") } })
+
+        val freed = runBlocking { withTimeout(120_000) { com.turbo.gamebooster.core.DeepClean.clean(ctx, cats) } }
+        Log.i("SvTest", "limpeza completa liberou: $freed bytes")
+        val left = sh("ls $root/DCIM/.thumbnails $root/Download $root/Android/data/com.android.chrome/cache").out
+        Log.i("SvTest", "depois da limpeza: " + left.replace("\n", " "))
+        assertFalse("miniatura não foi apagada", left.contains("thumb1.jpg"))
+        assertFalse("apk não foi apagado", left.contains("instalador_velho.apk"))
+        assertFalse("log não foi apagado", left.contains("erro.log"))
+        assertFalse("cache externo não foi apagado", left.contains("lixo.bin"))
+        assertTrue("APAGOU A FOTO DO USUÁRIO", left.contains("foto_importante.jpg"))
+        assertTrue("APAGOU O PDF DO USUÁRIO", left.contains("trabalho.pdf"))
+        sh("rm -f $root/Download/foto_importante.jpg $root/Download/trabalho.pdf")
+    }
+
+    @Test
+    fun t11_focoTotalFechaOsOutrosApps() {
+        sh("am start -W -n com.android.chrome/com.google.android.apps.chrome.Main")
+        Thread.sleep(3000)
+        val before = sh("pidof com.android.chrome").out.trim()
+        Log.i("SvTest", "chrome antes: '$before'")
+        assertTrue("o Chrome nem abriu para o teste", before.isNotEmpty())
+        device.pressHome()
+        val n = runBlocking { withTimeout(60_000) { com.turbo.gamebooster.core.Focus.closeOthers(ctx, keep = target) } }
+        Thread.sleep(1500)
+        val after = sh("pidof com.android.chrome").out.trim()
+        Log.i("SvTest", "foco total: $n apps fechados, chrome depois: '$after'")
+        assertTrue("foco total falhou: ${Tweaks.lastError}", n > 0)
+        assertTrue("o Chrome continuou aberto", after.isEmpty())
+    }
 }
