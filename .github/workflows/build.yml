@@ -24,7 +24,7 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -E "^e: |error:|Could not|What went wrong|> " build.log | head -40 | while IFS= read -r l; do echo "::error::${l:0:900}"; done
+          { grep -E "^e: " build.log; grep -A6 "What went wrong" build.log; } | grep -v "^--$" | head -9 | while IFS= read -r l; do echo "::error::${l:0:1500}"; done
       - name: Renomear
         run: cp app/build/outputs/apk/debug/app-debug.apk SvBooster.apk
       - uses: actions/upload-artifact@v4
