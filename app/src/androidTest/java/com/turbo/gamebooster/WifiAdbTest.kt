@@ -126,9 +126,7 @@ class WifiAdbTest {
                     }
                 }
                 else -> {
-                    ctx.startActivity(
-                        Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    )
+                    sh("am start -W -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS")
                     device.wait(Until.hasObject(By.text("Use developer options")), 6000)
                     allowNetworkIfAsked()
                     if (!device.hasObject(By.text("Use developer options"))) {
