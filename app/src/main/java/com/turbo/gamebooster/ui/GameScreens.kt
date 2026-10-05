@@ -109,7 +109,7 @@ val LEVELS = listOf(
     TurboLevel("Leve", "85% · FPS livre", Icons.Filled.Eco, Cyan, GameProfile(downscale = 0.85f, fps = 0, mode = 2)),
     TurboLevel("Equilibrado", "70% · FPS livre", Icons.Filled.Balance, Neon, GameProfile(downscale = 0.7f, fps = 0, mode = 2, maxRefresh = true)),
     TurboLevel(
-        "Máximo", "50% · desempenho máx.", Icons.Filled.LocalFireDepartment, Amber,
+        "Máximo", "50% · turbo máx.", Icons.Filled.LocalFireDepartment, Amber,
         GameProfile(downscale = 0.5f, fps = 0, mode = 2, noAnimations = true, maxRefresh = true, maxPerformance = true)
     ),
     TurboLevel(

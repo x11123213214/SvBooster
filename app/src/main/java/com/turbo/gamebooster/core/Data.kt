@@ -13,13 +13,13 @@ import org.json.JSONObject
 
 /** Configuração salva por jogo. */
 data class GameProfile(
-    val downscale: Float = 1.0f,   // 1.0 = resolução nativa
+    val downscale: Float = 0.7f,   // começa no nível Equilibrado (1.0 = nativa)
     val fps: Int = 0,              // 0 = sem limite
     val mode: Int = 2,             // 1 padrão, 2 desempenho, 3 bateria
     val killBackground: Boolean = true,
     val dnd: Boolean = false,
     val noAnimations: Boolean = false,
-    val maxRefresh: Boolean = false,
+    val maxRefresh: Boolean = true,
     val hud: Boolean = false,
     val crosshair: Boolean = false,
     val forceGlobal: Boolean = false, // resolução da tela inteira enquanto o jogo está aberto
