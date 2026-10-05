@@ -58,6 +58,19 @@ class WifiAdbTest {
     private fun screenTexts(): List<String> =
         device.findObjects(By.textContains("")).mapNotNull { it.text }
 
+    private fun shadeOpen() = device.hasObject(By.text("Flashlight")) || device.hasObject(By.text("Manage"))
+
+    /** Fecha a cortina de notificações (vários métodos, pois varia entre versões). */
+    private fun closeShade() {
+        if (!shadeOpen()) return
+        device.pressBack(); Thread.sleep(500)
+        if (shadeOpen()) { sh("cmd statusbar collapse"); Thread.sleep(600) }
+        if (shadeOpen()) { sh("service call statusbar 2"); Thread.sleep(600) }
+        if (shadeOpen()) { device.swipe(device.displayWidth / 2, device.displayHeight - 5, device.displayWidth / 2, 5, 15); Thread.sleep(600) }
+        if (shadeOpen()) { device.pressHome(); Thread.sleep(800) }
+        Log.i("SvTest", "cortina aberta depois de fechar? ${shadeOpen()}")
+    }
+
     /** Responde "Permitir depuração por Wi-Fi nesta rede?" (sempre permitir). */
     private fun allowNetworkIfAsked() {
         if (device.wait(Until.hasObject(By.textContains("Allow wireless debugging")), 2500) == true) {
@@ -82,6 +95,7 @@ class WifiAdbTest {
         sh("appops set ${ctx.packageName} SYSTEM_ALERT_WINDOW allow")
         device.pressHome()
         Thread.sleep(800)
+        closeShade()
 
         // A pergunta "permitir nesta rede?" aparece ao ligar a depuração: responde primeiro.
         allowNetworkIfAsked()
@@ -91,9 +105,7 @@ class WifiAdbTest {
 
         // Vai até Opções do desenvolvedor → Depuração por Wi-Fi e liga a chave (como uma pessoa faria)
         for (attempt in 1..8) {
-            if (device.hasObject(By.text("Flashlight")) || device.hasObject(By.text("Manage"))) {
-                sh("cmd statusbar collapse"); Thread.sleep(800) // fecha a cortina de notificações se abriu
-            }
+            closeShade()
             when {
                 device.hasObject(By.textContains("Pair device with pairing code")) -> break
                 device.hasObject(By.textContains("IP address")) -> {
@@ -146,7 +158,7 @@ class WifiAdbTest {
         shot("w2_codigo_pareamento.png")
 
         if (!device.hasObject(By.textContains("pairing code"))) {
-            sh("cmd statusbar collapse"); Thread.sleep(800)
+            closeShade()
             device.findObject(By.textContains("Pair device with pairing code"))?.click()
             device.wait(Until.hasObject(By.textContains("pairing code")), 6000)
         }
@@ -159,7 +171,7 @@ class WifiAdbTest {
         // Agora inicia o serviço do Sv Booster (o mesmo do botão "Começar pareamento").
         PairingService.start(ctx)
         Thread.sleep(1500)
-        sh("cmd statusbar collapse")
+        closeShade()
         // O serviço tem que achar a porta sozinho (mDNS)…
         var w = 0
         while (!PairingService.status.contains("encontrado") && w < 20) { Thread.sleep(500); w++ }
