@@ -55,6 +55,17 @@ class WifiAdbTest {
     private fun screenTexts(): List<String> =
         device.findObjects(By.textContains("")).mapNotNull { it.text }
 
+    /** Responde "Permitir depuração por Wi-Fi nesta rede?" (sempre permitir). */
+    private fun allowNetworkIfAsked() {
+        if (device.wait(Until.hasObject(By.textContains("Allow wireless debugging")), 2500) == true) {
+            shot("w0_permitir_rede.png")
+            device.findObject(By.textContains("Always allow"))?.click()
+            Thread.sleep(400)
+            device.findObject(By.text("Allow"))?.click() ?: device.findObject(By.text("ALLOW"))?.click()
+            Thread.sleep(2500)
+        }
+    }
+
     @Test
     fun w1_pareiaConectaERodaComandos() {
         Shell.testExecutor = null
@@ -72,9 +83,17 @@ class WifiAdbTest {
         } catch (_: Exception) {
         }
         device.findObject(By.text("Wireless debugging"))?.click()
+        device.wait(Until.hasObject(By.textContains("Pair device with pairing code")), 6000)
+        allowNetworkIfAsked()
+        // Garante que a chave está ligada.
+        if (!device.hasObject(By.textContains("Pair device with pairing code"))) {
+            device.findObject(By.text("Use wireless debugging"))?.click()
+            allowNetworkIfAsked()
+        }
         device.wait(Until.hasObject(By.textContains("Pair device with pairing code")), 8000)
         shot("w1_depuracao_wifi.png")
         device.findObject(By.textContains("Pair device with pairing code"))?.click()
+        allowNetworkIfAsked()
         device.wait(Until.hasObject(By.textContains("pairing code")), 8000)
         Thread.sleep(1500)
         shot("w2_codigo_pareamento.png")
