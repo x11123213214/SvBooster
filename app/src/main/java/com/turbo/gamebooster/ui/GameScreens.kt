@@ -183,7 +183,7 @@ fun GamesScreen(
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text("Libere o modo turbo", fontWeight = FontWeight.Bold)
-                        Hint("Resolução e FPS precisam do Shizuku. Toque para configurar (2 min).")
+                        Hint("Resolução e FPS precisam do Modo Turbo. Sem Shizuku, sem root: toque para ativar (2 min).")
                     }
                 }
             }
@@ -399,7 +399,7 @@ fun ProfileScreen(pkg: String, mode: Shell.Mode, onSetup: () -> Unit, onBack: ()
     var running by remember { mutableStateOf(false) }
     var advanced by remember { mutableStateOf(false) }
     val hasShell = mode != Shell.Mode.NONE
-    val needShell = if (hasShell) null else "SHIZUKU"
+    val needShell = if (hasShell) null else "TURBO"
     val current = levelOf(p)
     BackHandler { onBack() }
 
@@ -438,7 +438,7 @@ fun ProfileScreen(pkg: String, mode: Shell.Mode, onSetup: () -> Unit, onBack: ()
                 ) {
                     Icon(Icons.Filled.Warning, null, tint = Amber)
                     Spacer(Modifier.width(10.dp))
-                    Text("Ative o Shizuku para liberar resolução e FPS →", fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text("Ative o Modo Turbo para liberar resolução e FPS →", fontSize = 13.sp, modifier = Modifier.weight(1f))
                 }
             }
 

@@ -94,7 +94,7 @@ fun ToolsScreen(mode: Shell.Mode) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val hasShell = mode != Shell.Mode.NONE
-    val needShell = if (hasShell) null else "SHIZUKU"
+    val needShell = if (hasShell) null else "TURBO"
 
     Column(
         Modifier

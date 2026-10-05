@@ -7,6 +7,7 @@ import androidx.lifecycle.lifecycleScope
 import com.turbo.gamebooster.core.Booster
 import com.turbo.gamebooster.core.Prefs
 import com.turbo.gamebooster.core.Shortcuts
+import com.turbo.gamebooster.shell.AdbShell
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.activity.ComponentActivity
@@ -79,6 +80,12 @@ class MainActivity : ComponentActivity() {
         Shizuku.addBinderDeadListener(deadListener)
         setContent { TurboTheme { App(tick.intValue) { tick.intValue++ } } }
         handleShortcut(intent)
+        // Já pareado antes? Reconecta o modo turbo sozinho.
+        lifecycleScope.launch {
+            if (AdbShell.paired() && !Shell.shizukuGranted()) {
+                AdbShell.connect(); tick.intValue++
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -91,9 +98,10 @@ class MainActivity : ComponentActivity() {
         val pkg = i?.getStringExtra(Shortcuts.EXTRA_BOOST) ?: return
         i.removeExtra(Shortcuts.EXTRA_BOOST)
         lifecycleScope.launch {
-            // Na abertura a frio o Shizuku conecta alguns instantes depois.
+            // Na abertura a frio a conexão leva alguns instantes.
+            if (AdbShell.paired()) AdbShell.connect()
             var waited = 0
-            while (!Shell.shizukuGranted() && waited < 20) { delay(100); waited++ }
+            while (Shell.mode() == Shell.Mode.NONE && waited < 30) { delay(100); waited++ }
             Toast.makeText(this@MainActivity, "⚡ Sv Booster: preparando…", Toast.LENGTH_SHORT).show()
             Booster.boostAndLaunch(this@MainActivity, pkg, Prefs.profile(this@MainActivity, pkg)) {}
             moveTaskToBack(true)
@@ -179,9 +187,8 @@ private fun Header(mode: Shell.Mode) {
             Text("Mais FPS, menos travadas", color = Muted, fontSize = 11.sp)
         }
         when (mode) {
-            Shell.Mode.SHIZUKU -> Tag("SHIZUKU ✓", Neon)
-            Shell.Mode.ROOT -> Tag("ROOT ✓", Neon)
             Shell.Mode.NONE -> Tag("MODO BÁSICO", Amber)
+            else -> Tag("TURBO ✓", Neon)
         }
     }
 }

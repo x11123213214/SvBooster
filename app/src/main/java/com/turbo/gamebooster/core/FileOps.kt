@@ -38,7 +38,7 @@ object FileOps {
     private fun q(p: String) = "'" + p.replace("'", "'\\''") + "'"
 
     private fun needShell(path: String): String? =
-        if (restricted(path) && !Shell.hasShell()) "Android/data e Android/obb precisam do Shizuku ou root (aba Ajustes)" else null
+        if (restricted(path) && !Shell.hasShell()) "Android/data e Android/obb precisam do Modo Turbo (aba Ajustes)" else null
 
     suspend fun list(path: String): Result<List<FEntry>> = withContext(Dispatchers.IO) {
         needShell(path)?.let { return@withContext Result.failure(Exception(it)) }

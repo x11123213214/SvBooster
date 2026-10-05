@@ -70,7 +70,7 @@ object Booster {
             if (p.noAnimations && Tweaks.disableAnimations(ctx)) log("Animações do sistema desligadas")
             if (p.maxRefresh && Tweaks.setMaxRefresh(ctx, true)) log("Tela travada em ${Tweaks.maxRefreshRate(ctx).roundToInt()} Hz")
         } else if (p.downscale < 1f || p.fps > 0 || p.noAnimations || p.maxRefresh) {
-            log("Shizuku/root não conectado — resolução, FPS, animações e Hz foram pulados (veja aba Ajustes)")
+            log("Modo Turbo desativado — resolução, FPS, animações e Hz foram pulados (ative na aba Ajustes)")
         }
 
         if (p.dnd) log(if (Tweaks.setDnd(ctx, true)) "Não perturbe ligado" else "Sem acesso ao Não perturbe (aba Ajustes)")
@@ -184,7 +184,7 @@ object Tweaks {
 
     /** Muda a resolução da tela inteira (todos os apps). Funciona mesmo quando o modo por app falha. */
     suspend fun applyGlobalResolution(ctx: Context, scale: Float): String {
-        if (!Shell.hasShell()) return "Precisa do Shizuku ou root (aba Ajustes)."
+        if (!Shell.hasShell()) return "Ative o Modo Turbo (aba Ajustes)."
         if (scale >= 0.99f) {
             resetGlobalResolution(ctx); return "Resolução nativa restaurada."
         }

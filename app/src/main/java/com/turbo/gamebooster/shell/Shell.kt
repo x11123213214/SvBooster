@@ -16,7 +16,7 @@ object Shell {
         val ok get() = code == 0
     }
 
-    enum class Mode { SHIZUKU, ROOT, NONE }
+    enum class Mode { SHIZUKU, ROOT, ADB, NONE }
 
     @Volatile
     var rootAvailable = false
@@ -44,6 +44,7 @@ object Shell {
     fun mode(): Mode = when {
         shizukuGranted() -> Mode.SHIZUKU
         rootAvailable -> Mode.ROOT
+        AdbShell.connected -> Mode.ADB
         else -> Mode.NONE
     }
 
@@ -68,7 +69,8 @@ object Shell {
             val p: Process = when (mode()) {
                 Mode.SHIZUKU -> newShizukuProcess(arrayOf("sh", "-c", script))
                 Mode.ROOT -> Runtime.getRuntime().exec(arrayOf("su", "-c", script))
-                Mode.NONE -> return@withContext Result(-1, "", "Shizuku/root não conectado")
+                Mode.ADB -> return@withContext AdbShell.exec(script)
+                Mode.NONE -> return@withContext Result(-1, "", "Modo turbo desativado (aba Ajustes)")
             }
             val err = StringBuilder()
             val t = Thread { err.append(p.errorStream.bufferedReader().readText()) }

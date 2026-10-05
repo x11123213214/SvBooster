@@ -88,13 +88,14 @@ fun SetupScreen(tick: Int, onChanged: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        SectionCard("Shizuku (recomendado)", Icons.Filled.AdminPanelSettings) {
+        TurboModeCard(tick, onChanged)
+
+        SectionCard("Shizuku (opcional)", Icons.Filled.AdminPanelSettings) {
             StatusLine(running, if (running) "Shizuku rodando" else "Shizuku não está rodando")
             StatusLine(granted, if (granted) "Permissão concedida — recursos avançados liberados" else "Permissão pendente")
             Spacer(Modifier.height(6.dp))
             Hint(
-                "O Android não deixa um app comum mudar a resolução ou o FPS de outro app. O Shizuku dá ao " +
-                    "Sv Booster o mesmo acesso de um comando ADB, sem root."
+                "Não precisa: o Modo Turbo acima já faz tudo. Use o Shizuku só se você já tiver ele instalado."
             )
             Spacer(Modifier.height(10.dp))
             when {
@@ -106,20 +107,7 @@ fun SetupScreen(tick: Int, onChanged: () -> Unit) {
                     Button(onClick = {
                         open(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=moe.shizuku.privileged.api")))
                     }, modifier = Modifier.fillMaxWidth()) { Text("Baixar Shizuku") }
-                    Spacer(Modifier.height(8.dp))
-                    Text("Como ativar (Android 11+, sem PC):", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Hint(
-                        "1. Ative as Opções do desenvolvedor (toque 7x em 'Número da versão').\n" +
-                            "2. Ligue 'Depuração por Wi-Fi'.\n" +
-                            "3. Abra o Shizuku → 'Iniciar via depuração sem fio' e faça o pareamento.\n" +
-                            "4. Volte aqui e toque em 'Conceder permissão'."
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text("Ou pelo PC:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text(
-                        "adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh",
-                        fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = Cyan
-                    )
+
                 }
             }
         }
