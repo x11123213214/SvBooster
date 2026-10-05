@@ -165,8 +165,19 @@ object Tweaks {
     @Volatile
     var lastError: String = ""
 
+    /** Texto do aviso quando o sistema bloqueia (Xiaomi/Redmi/Poco e outras marcas). */
+    val SECURE_HINT: String
+        get() = if (Build.MANUFACTURER.equals("xiaomi", true) || Build.BRAND.lowercase() in setOf("xiaomi", "redmi", "poco"))
+            "A Xiaomi bloqueou. Ligue em Opções do desenvolvedor: \"Depuração USB (Configurações de segurança)\" e tente de novo."
+        else
+            "O sistema bloqueou. Em Opções do desenvolvedor, ligue as opções de depuração com \"segurança\" no nome (se houver) e tente de novo."
+
+    fun friendly(raw: String): String =
+        if (raw.contains("WRITE_SECURE_SETTINGS") || raw.contains("SecurityException")) SECURE_HINT
+        else raw.take(150)
+
     private fun fail(r: Shell.Result): Boolean {
-        lastError = r.err.ifBlank { r.out }.ifBlank { "erro ${r.code}" }.take(150)
+        lastError = friendly(r.err.ifBlank { r.out }.ifBlank { "erro ${r.code}" })
         return false
     }
     private val ANIM_KEYS = listOf("window_animation_scale", "transition_animation_scale", "animator_duration_scale")
@@ -250,7 +261,7 @@ object Tweaks {
         return if (r.ok) {
             Prefs.setGlobalScale(ctx, scale)
             "Tela agora em ${nw}x$nh (nativa ${w}x$h)"
-        } else "Erro: ${r.err.take(160)}"
+        } else "Erro: ${friendly(r.err.ifBlank { r.out })}"
     }
 
     suspend fun resetGlobalResolution(ctx: Context): Boolean {

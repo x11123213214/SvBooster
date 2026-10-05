@@ -200,6 +200,10 @@ object AdbShell {
     /** Teste rápido para a tela de Ajustes. */
     suspend fun selfTest(): String {
         val r = Shell.run("id -un; getprop ro.build.version.release; wm size", timeoutMs = 8000)
-        return if (r.ok) "OK ✓ (${Shell.mode()})\n${r.out.trim()}" else "Falhou (${Shell.mode()}): ${r.err.ifBlank { r.out }.take(300)}"
+        if (!r.ok) return "Falhou (${Shell.mode()}): ${com.turbo.gamebooster.core.Tweaks.friendly(r.err.ifBlank { r.out })}"
+        // Confere se o sistema deixa mudar configurações (a Xiaomi bloqueia sem uma chave extra).
+        val w = Shell.run("settings put global sv_booster_check 1 && settings delete global sv_booster_check", timeoutMs = 8000)
+        return if (w.ok) "OK ✓ Tudo liberado (${Shell.mode()})\n${r.out.trim()}"
+        else "Conectado, mas: ${com.turbo.gamebooster.core.Tweaks.friendly(w.err.ifBlank { w.out })}"
     }
 }

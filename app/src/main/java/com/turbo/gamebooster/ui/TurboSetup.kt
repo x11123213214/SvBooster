@@ -146,6 +146,7 @@ fun TurboModeCard(tick: Int, onChanged: () -> Unit) {
                 ) { Text("Reconectar") }
             }
             msg?.let { Text(it, color = Cyan, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
+            DevOptionsHelp(msg)
             if (Shell.mode() == Shell.Mode.ADB) Hint("Se o teste falhar: ligue a Depuração por Wi-Fi (Opções do desenvolvedor), fique no Wi-Fi e toque em Reconectar.")
             return@SectionCard
         }

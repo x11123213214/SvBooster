@@ -203,6 +203,7 @@ fun ToolsScreen(mode: Shell.Mode) {
                 ) { Text("Restaurar") }
             }
             resMsg?.let { Text(it, color = Cyan, fontSize = 13.sp) }
+            DevOptionsHelp(resMsg)
         }
 
         // ---- Tela e sistema
@@ -229,6 +230,7 @@ fun ToolsScreen(mode: Shell.Mode) {
                 }
             }
             tweakMsg?.let { Text(it, color = Cyan, fontSize = 13.sp) }
+            DevOptionsHelp(tweakMsg)
             if (Tweaks.maxRefreshRate(ctx) < 61f) Hint("Sua tela informa no máximo 60 Hz, então não há como subir a taxa.")
         }
 

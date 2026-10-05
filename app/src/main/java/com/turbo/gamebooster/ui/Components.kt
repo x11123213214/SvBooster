@@ -298,3 +298,23 @@ fun CrosshairPreview(color: Color, sizeDp: Int, style: Int, modifier: Modifier =
         }
     }
 }
+
+
+/** Se a mensagem pede para mexer nas Opções do desenvolvedor, mostra um botão que abre a tela. */
+@Composable
+fun DevOptionsHelp(msg: String?) {
+    if (msg == null || !msg.contains("Opções do desenvolvedor")) return
+    val ctx = LocalContext.current
+    androidx.compose.material3.OutlinedButton(
+        onClick = {
+            try {
+                ctx.startActivity(
+                    android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            } catch (_: Exception) {
+            }
+        },
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+    ) { Text("Abrir Opções do desenvolvedor") }
+}
