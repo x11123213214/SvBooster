@@ -1,0 +1,83 @@
+--------- beginning of main
+10-05 23:18:43.443  3613  3814 I TestRunner: run started: 12 tests
+10-05 23:18:43.449  3613  3814 I TestRunner: started: t5_limpezaNaoTrava(com.turbo.gamebooster.BoostTest)
+10-05 23:18:46.203  3613  3814 I SvTest  : limpeza: Res(ramMb=94, cacheMb=10)
+10-05 23:18:46.339  3613  3814 I TestRunner: finished: t5_limpezaNaoTrava(com.turbo.gamebooster.BoostTest)
+10-05 23:18:46.341  3613  3814 I TestRunner: started: t10_limpezaCompletaApagaLixoENaoApagaArquivosDoUsuario(com.turbo.gamebooster.BoostTest)
+10-05 23:18:47.130  3613  3814 I SvTest  : limpeza completa achou: cache_int=-1/0, cache_ext=815104/0, thumbs=524396/4, apks=2097152/2, temps=65536/1
+10-05 23:18:47.477  3613  3814 I SvTest  : limpeza completa liberou: 3502188 bytes
+10-05 23:18:47.499  3613  3814 I SvTest  : depois da limpeza: /sdcard/Android/data/com.android.chrome/cache:  /sdcard/DCIM/.thumbnails:  /sdcard/Download: foto_importante.jpg trabalho.pdf 
+10-05 23:18:47.668  3613  3814 I TestRunner: finished: t10_limpezaCompletaApagaLixoENaoApagaArquivosDoUsuario(com.turbo.gamebooster.BoostTest)
+10-05 23:18:47.669  3613  3814 I TestRunner: started: t3_animacoesDesligamEVoltam(com.turbo.gamebooster.BoostTest)
+10-05 23:18:48.669  3613  3814 I TestRunner: finished: t3_animacoesDesligamEVoltam(com.turbo.gamebooster.BoostTest)
+10-05 23:18:48.670  3613  3814 I TestRunner: started: t6_boostAbreOJogoEAplicaTudo(com.turbo.gamebooster.BoostTest)
+10-05 23:18:56.681  3613  3814 I SvTest  : relatório: [Limpeza: +73 MB de RAM, Este jogo não aceita limite de FPS pelo sistema, Tela agora em 160x320 (nativa 320x640), Foco total: 13 apps fechados, o celular fica só para o jogo, Animações desligadas, Tela em 60 Hz, Abrindo o jogo… bom jogo! 🎮]
+10-05 23:19:08.171  3613  3814 I TestRunner: finished: t6_boostAbreOJogoEAplicaTudo(com.turbo.gamebooster.BoostTest)
+10-05 23:19:08.174  3613  3814 I TestRunner: started: t1_modoTurboExecutaComandos(com.turbo.gamebooster.BoostTest)
+10-05 23:19:08.805  3613  3814 I TestRunner: finished: t1_modoTurboExecutaComandos(com.turbo.gamebooster.BoostTest)
+10-05 23:19:08.806  3613  3814 I TestRunner: started: t4_hzMaximo(com.turbo.gamebooster.BoostTest)
+10-05 23:19:09.359  3613  3814 I TestRunner: finished: t4_hzMaximo(com.turbo.gamebooster.BoostTest)
+10-05 23:19:09.361  3613  3814 I TestRunner: started: t8_prints(com.turbo.gamebooster.BoostTest)
+10-05 23:19:19.693  3613  3814 I TestRunner: finished: t8_prints(com.turbo.gamebooster.BoostTest)
+10-05 23:19:19.723  3613  3814 I TestRunner: started: t7_boostSemModoTurboTambemAbreOJogo(com.turbo.gamebooster.BoostTest)
+10-05 23:19:24.993  3613  3814 I TestRunner: finished: t7_boostSemModoTurboTambemAbreOJogo(com.turbo.gamebooster.BoostTest)
+10-05 23:19:24.994  3613  3814 I TestRunner: started: t2_resolucaoBaixaEVolta(com.turbo.gamebooster.BoostTest)
+10-05 23:19:25.457  3613  3814 I SvTest  : resolução: Tela agora em 160x320 (nativa 320x640) / Physical size: 320x640
+10-05 23:19:25.457  3613  3814 I SvTest  : Override size: 200x320
+10-05 23:19:26.100  3613  3814 I TestRunner: finished: t2_resolucaoBaixaEVolta(com.turbo.gamebooster.BoostTest)
+10-05 23:19:26.106  3613  3814 I TestRunner: started: t11_focoTotalFechaOsOutrosApps(com.turbo.gamebooster.BoostTest)
+--------- beginning of crash
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: FATAL EXCEPTION: launcher-loader
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: Process: com.google.android.apps.nexuslauncher, PID: 1021
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: android.database.sqlite.SQLiteDatabaseLockedException: database is locked (code 5 SQLITE_BUSY)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.nativeExecuteForChangedRowCount(Native Method)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.database.sqlite.SQLiteConnection.executeForChangedRowCount(SQLiteConnection.java:913)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.database.sqlite.SQLiteSession.executeForChangedRowCount(SQLiteSession.java:756)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.database.sqlite.SQLiteStatement.executeUpdateDelete(SQLiteStatement.java:67)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.database.sqlite.SQLiteDatabase.executeSql(SQLiteDatabase.java:2087)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.database.sqlite.SQLiteDatabase.execSQL(SQLiteDatabase.java:2008)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at i2.h.copyTable(Unknown Source:77)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at com.android.launcher3.LauncherProvider.prepForMigration(Unknown Source:66)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at com.android.launcher3.LauncherProvider.call(Unknown Source:392)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.content.ContentProvider.call(ContentProvider.java:2511)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.content.ContentProvider$Transport.call(ContentProvider.java:525)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.content.ContentResolver.call(ContentResolver.java:2450)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.content.ContentResolver.call(ContentResolver.java:2430)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at com.android.launcher3.model.ModelUtils.migrateGridIfNeeded(Unknown Source:140)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at com.android.launcher3.model.LoaderTask.loadWorkspace(Unknown Source:46)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at com.android.launcher3.model.LoaderTask.run(Unknown Source:54)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.os.Handler.handleCallback(Handler.java:942)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:99)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:201)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:288)
+10-05 23:19:30.223  1021  1052 E AndroidRuntime: 	at android.os.HandlerThread.run(HandlerThread.java:67)
+10-05 23:19:30.263  3613  3814 I SvTest  : chrome antes: '5377'
+10-05 23:19:33.362  3613  3814 I SvTest  : foco total: 13 apps fechados, chrome depois: ''
+10-05 23:19:33.475  3613  3814 I TestRunner: finished: t11_focoTotalFechaOsOutrosApps(com.turbo.gamebooster.BoostTest)
+10-05 23:19:33.479  3613  3814 I TestRunner: started: t9_desempenhoMaximoLigaEVolta(com.turbo.gamebooster.BoostTest)
+10-05 23:19:33.728  3613  3814 I SvTest  : desempenho: ok=true erro= thermal=IsStatusOverride: true ThermalEventListeners: 	callbacks: 3 
+10-05 23:19:33.882  3613  3814 I TestRunner: finished: t9_desempenhoMaximoLigaEVolta(com.turbo.gamebooster.BoostTest)
+10-05 23:19:33.884  3613  3814 I TestRunner: started: w1_pareiaConectaERodaComandos(com.turbo.gamebooster.WifiAdbTest)
+10-05 23:19:37.005  3613  3814 I SvTest  : wifi: mWifiInfo SSID: "AndroidWifi", BSSID: 02:15:b2:00:00:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: 1, RSSI: -50, Link speed: 6Mbps, Tx Link
+10-05 23:19:40.932  3613  3814 I SvTest  : adb_wifi_enabled=0
+10-05 23:19:40.945  3613  3814 I SvTest  : dev-activities: 1 activities found: |   Activity #0: |     priority=-1 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true |     com.android.settings/.development.DevelopmentSettingsDisabledActivity | 
+10-05 23:19:40.987  3613  3814 I SvTest  : wireless-activities:         ff0c0a0 com.android.settings/.Settings$DevelopmentSettingsDashboardActivity filter 6bb581e |       android.settings.APPLICATION_DEVELOPMENT_SETTINGS: |         ff0c0a0 com.android.settings/.Settings$DevelopmentSettingsDashboardActivity filter ff2f459 |           Action: "android.settings.APPLICATION_DEVELOPMENT_SETTINGS" |           Action: "com.android.settings.APPLICATION_DEVELOPMENT_SETTINGS" |         7d1d8ff com.android.settings/.development.DevelopmentSettingsDisabledActivity filter 8b146cc |           Action: "android.settings.APPLICATION_DEVELOPMENT_SETTINGS" |           Action: "com.android.settings.APPLICATION_DEVELOPMENT_SETTINGS" |           Action: "android.settings.WIRELESS_SETTINGS" |           Category: "android.intent.category.DEVELOPMENT_PREFERENCE" |           Category: "android.intent.category.DEVELOPMENT_PREFERENCE" |           Category: "android.intent.category.DEVELOPMENT_PREFERENCE" |           Category: "android.intent.category.DEVELOPMENT_PREFERENCE" |           Category: "android.intent.category.DEVELOPMENT_PREFERENCE" |       android.settings.WIRELESS_SETTINGS: |           Action: "android.settings.WIRELESS_SETTINGS" |         ff0c0a0 com.android.settings/.Settings$DevelopmentSettingsDashboardActivity filter ff2f459 |           Action: "android.settings.APPLICATION_DEVELOPMENT_SETTINGS" |           Action: "com.android.settings.APPLICATION_DEVELOPMENT_SETTINGS" |           Action: "android.settings.WIRELESS_SETTINGS" | Failed to write while dumping service package: Broken pipe | 
+10-05 23:20:09.034  3613  3814 I SvTest  : passo 1: [Use developer options, Memory, Avg 1.7 GB of 2.1 GB memory used, Bug report, Bug report handler, Android System, Capture system heap dump, 11:20]
+10-05 23:20:17.733  3613  3814 I SvTest  : passo 2: [Use developer options, DSU Loader, Load a Dynamic System Update Image, System UI demo mode, Quick settings developer tiles, Debugging, USB debugging, Debug mode when USB is connected, Wireless debugging, Debug mode when Wi‑Fi is connected]
+10-05 23:20:18.931  3613  3814 I SvTest  : passo 3: [Use wireless debugging, To see and use available devices, turn on wireless debugging, 11:20]
+10-05 23:20:31.868  3613  3814 I SvTest  : passo 4: [Use wireless debugging, Device name, sdk_gphone64_x86_64, IP address & Port, 10.0.2.16:34765, Pair device with QR code, Pair new devices using QR code scanner, 11:20]
+10-05 23:20:32.923  3613  3814 I SvTest  : passo 5: [Use wireless debugging, Device name, sdk_gphone64_x86_64, IP address & Port, 10.0.2.16:34765, Pair device with QR code, Pair new devices using QR code scanner, Pair device with pairing code, Pair new devices using six digit code, Paired devices]
+10-05 23:20:38.338  3613  3814 I SvTest  : tela: [Pair with device, Wi‑Fi pairing code, 001544, IP address & Port, 10.0.2.16:39089, Cancel, 11:20]
+10-05 23:20:39.845  3613  3814 I SvTest  : serviço: Pareamento encontrado!
+10-05 23:20:40.491  3613  3814 I SvTest  : janela de pareamento ainda aberta? true
+10-05 23:20:40.992  3613  3814 I SvTest  : serviço depois do código: Modo turbo ativado ✓ erro=null
+10-05 23:20:41.738  3613  3814 I SvTest  : comando via Wi-Fi: Result(code=0, out=shell
+10-05 23:20:41.738  3613  3814 I SvTest  : Physical size: 320x640, err=)
+10-05 23:20:42.091  3613  3814 I SvTest  : resolução via Wi-Fi: Tela agora em 160x320 (nativa 320x640) / Physical size: 320x640
+10-05 23:20:42.091  3613  3814 I SvTest  : Override size: 200x320
+10-05 23:20:43.324  3613  3814 I SvTest  : autoteste: OK ✓ Tudo liberado (ADB)
+10-05 23:20:43.324  3613  3814 I SvTest  : shell
+10-05 23:20:43.324  3613  3814 I SvTest  : 13
+10-05 23:20:43.324  3613  3814 I SvTest  : Physical size: 320x640
+10-05 23:20:43.370  3613  3814 I TestRunner: finished: w1_pareiaConectaERodaComandos(com.turbo.gamebooster.WifiAdbTest)
+10-05 23:20:43.373  3613  3814 I TestRunner: run finished: 12 tests, 0 failed, 0 ignored

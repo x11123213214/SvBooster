@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="com.turbo.gamebooster.BoostTest" tests="12" failures="0" errors="0" skipped="0" time="121.149" timestamp="2026-10-05T23:20:44" hostname="localhost">
+  <properties>
+    <property name="device" value="emulator-5554 - 13" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="t5_limpezaNaoTrava" classname="com.turbo.gamebooster.BoostTest" time="2.821" />
+  <testcase name="t10_limpezaCompletaApagaLixoENaoApagaArquivosDoUsuario" classname="com.turbo.gamebooster.BoostTest" time="1.303" />
+  <testcase name="t3_animacoesDesligamEVoltam" classname="com.turbo.gamebooster.BoostTest" time="0.974" />
+  <testcase name="t6_boostAbreOJogoEAplicaTudo" classname="com.turbo.gamebooster.BoostTest" time="19.512" />
+  <testcase name="t1_modoTurboExecutaComandos" classname="com.turbo.gamebooster.BoostTest" time="0.634" />
+  <testcase name="t4_hzMaximo" classname="com.turbo.gamebooster.BoostTest" time="0.556" />
+  <testcase name="t8_prints" classname="com.turbo.gamebooster.BoostTest" time="10.337" />
+  <testcase name="t7_boostSemModoTurboTambemAbreOJogo" classname="com.turbo.gamebooster.BoostTest" time="5.267" />
+  <testcase name="t2_resolucaoBaixaEVolta" classname="com.turbo.gamebooster.BoostTest" time="1.112" />
+  <testcase name="t11_focoTotalFechaOsOutrosApps" classname="com.turbo.gamebooster.BoostTest" time="7.379" />
+  <testcase name="t9_desempenhoMaximoLigaEVolta" classname="com.turbo.gamebooster.BoostTest" time="0.398" />
+  <testcase name="w1_pareiaConectaERodaComandos" classname="com.turbo.gamebooster.WifiAdbTest" time="69.491" />
+</testsuite>
