@@ -101,7 +101,14 @@ fun TurboModeCard(tick: Int, onChanged: () -> Unit) {
         PairingService.start(ctx)
         try { ctx.startActivity(wirelessDebugIntent()) } catch (_: Exception) {}
     }
-    val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { startPairing() }
+    val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) startPairing()
+        else {
+            // Sem notificação: usa a digitação aqui mesmo (tela dividida)
+            manual = true
+            msg = "Sem permissão de notificação: digite porta e código aqui embaixo (use a tela dividida)."
+        }
+    }
 
     SectionCard("Modo Turbo", Icons.Filled.Bolt, if (active) null else "DESATIVADO") {
         if (active) {

@@ -77,6 +77,7 @@ class WifiAdbTest {
         Log.i("SvTest", "wifi: " + sh("dumpsys wifi | grep -m1 'mWifiInfo'").take(200))
 
         // Como no uso real: abre o Sv Booster e toca em "Começar pareamento" (inicia o serviço da notificação).
+        sh("pm grant ${ctx.packageName} android.permission.POST_NOTIFICATIONS")
         androidx.test.core.app.ActivityScenario.launch(MainActivity::class.java)
         Thread.sleep(1500)
         PairingService.start(ctx)
@@ -91,7 +92,10 @@ class WifiAdbTest {
         Log.i("SvTest", "wireless-activities: " + sh("dumpsys package com.android.settings | grep -iE 'Wireless|AdbWireless|DEVELOPMENT' | head -20").replace("\n", " | "))
 
         // Vai até Opções do desenvolvedor → Depuração por Wi-Fi e liga a chave (como uma pessoa faria)
-        for (attempt in 1..6) {
+        for (attempt in 1..8) {
+            if (device.hasObject(By.text("Flashlight")) || device.hasObject(By.text("Manage"))) {
+                device.pressBack(); Thread.sleep(600) // fecha a cortina de notificações se abriu
+            }
             when {
                 device.hasObject(By.textContains("Pair device with pairing code")) -> break
                 device.hasObject(By.textContains("IP address")) -> {
