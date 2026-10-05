@@ -81,6 +81,8 @@ class WifiAdbTest {
         Thread.sleep(1500)
         PairingService.start(ctx)
         Thread.sleep(1000)
+        device.pressHome()
+        Thread.sleep(1000)
 
         // A pergunta "permitir nesta rede?" aparece ao ligar a depuração: responde primeiro.
         allowNetworkIfAsked()
