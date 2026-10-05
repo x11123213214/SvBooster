@@ -158,7 +158,8 @@ fun TurboModeCard(tick: Int, onChanged: () -> Unit) {
         }
         Step(2, paired, "Pareie com o Sv Booster") {
             Hint(
-                "Toque no botão abaixo. Nas Configurações: ligue \"Depuração por Wi-Fi\" → toque nela → " +
+                "Toque no botão abaixo. Nas Configurações: ligue \"Depuração por Wi-Fi\" (se perguntar sobre a rede, marque " +
+                    "\"Sempre permitir\" e toque em Permitir) → toque no nome \"Depuração por Wi-Fi\" → " +
                     "\"Parear dispositivo com código de pareamento\". Depois digite o código na notificação do Sv Booster."
             )
             Spacer(Modifier.height(6.dp))

@@ -3,6 +3,9 @@ package com.turbo.gamebooster
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Bundle
+import androidx.core.app.RemoteInput
+import com.turbo.gamebooster.shell.PairingService
 import android.os.ParcelFileDescriptor
 import android.provider.Settings
 import android.util.Log
@@ -73,6 +76,12 @@ class WifiAdbTest {
         Thread.sleep(3000)
         Log.i("SvTest", "wifi: " + sh("dumpsys wifi | grep -m1 'mWifiInfo'").take(200))
 
+        // Como no uso real: abre o Sv Booster e toca em "Começar pareamento" (inicia o serviço da notificação).
+        androidx.test.core.app.ActivityScenario.launch(MainActivity::class.java)
+        Thread.sleep(1500)
+        PairingService.start(ctx)
+        Thread.sleep(1000)
+
         // A pergunta "permitir nesta rede?" aparece ao ligar a depuração: responde primeiro.
         allowNetworkIfAsked()
         Log.i("SvTest", "adb_wifi_enabled=" + sh("settings get global adb_wifi_enabled").trim())
@@ -140,14 +149,28 @@ class WifiAdbTest {
         val port = texts.firstNotNullOfOrNull { Regex(":(\\d{4,5})$").find(it.trim())?.groupValues?.get(1)?.toInt() }
         assertTrue("não achei código/porta na tela: $texts", code != null && port != null)
 
-        val paired = runBlocking { withTimeout(30_000) { AdbShell.pair(port!!, code!!) } }
-        Log.i("SvTest", "pareado=$paired erro=${AdbShell.lastError}")
-        shot("w3_depois_do_pareamento.png")
-        assertTrue("pareamento falhou: ${AdbShell.lastError}", paired)
+        // O serviço tem que achar a porta sozinho (mDNS)…
+        var w = 0
+        while (!PairingService.status.contains("encontrado") && w < 20) { Thread.sleep(500); w++ }
+        Log.i("SvTest", "serviço: ${PairingService.status}")
+        shot("w3_notificacao_encontrou.png")
+        assertTrue("o app não achou o pareamento sozinho: ${PairingService.status}", PairingService.status.contains("encontrado"))
 
-        val connected = runBlocking { withTimeout(40_000) { AdbShell.connect() } }
-        Log.i("SvTest", "conectado=$connected erro=${AdbShell.lastError}")
-        assertTrue("conexão falhou: ${AdbShell.lastError}", connected)
+        // …e o código é "digitado" na notificação (mesma Intent que a resposta da notificação envia).
+        val reply = Intent(ctx, PairingService::class.java).setAction(PairingService.ACTION_CODE)
+        RemoteInput.addResultsToIntent(
+            arrayOf(RemoteInput.Builder(PairingService.KEY).build()), reply,
+            Bundle().apply { putCharSequence(PairingService.KEY, code) }
+        )
+        ctx.startService(reply)
+        w = 0
+        while (!(PairingService.status.contains("✓") || PairingService.status.contains("errado") || PairingService.status.contains("Não achei")) && w < 80) {
+            Thread.sleep(500); w++
+        }
+        Log.i("SvTest", "serviço depois do código: ${PairingService.status} erro=${AdbShell.lastError}")
+        shot("w4_notificacao_resultado.png")
+        assertTrue("pareamento pela notificação falhou: ${PairingService.status} / ${AdbShell.lastError}", AdbShell.paired())
+        assertTrue("não conectou depois de parear: ${PairingService.status} / ${AdbShell.lastError}", AdbShell.connected || runBlocking { AdbShell.connect() })
         assertTrue("modo deveria ser ADB: ${Shell.mode()}", Shell.mode() == Shell.Mode.ADB)
 
         val r = runBlocking { withTimeout(20_000) { Shell.run("id -un; wm size") } }

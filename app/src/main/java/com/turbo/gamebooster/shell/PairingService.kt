@@ -33,8 +33,8 @@ class PairingService : Service() {
     companion object {
         private const val CH = "sv_pair"
         private const val NID = 9
-        private const val ACTION_CODE = "com.sv.booster.PAIR_CODE"
-        private const val KEY = "pair_code"
+        const val ACTION_CODE = "com.sv.booster.PAIR_CODE"
+        const val KEY = "pair_code"
 
         @Volatile
         var status: String = ""
