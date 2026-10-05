@@ -94,6 +94,11 @@ object Prefs {
     fun hudY(ctx: Context, def: Int) = sp(ctx).getInt("hud_y", def)
     fun setHudPos(ctx: Context, x: Int, y: Int) = sp(ctx).edit().putInt("hud_x", x).putInt("hud_y", y).apply()
 
+    fun firstRun(ctx: Context) = sp(ctx).getBoolean("first_run", true)
+    fun setFirstRunDone(ctx: Context) = sp(ctx).edit().putBoolean("first_run", false).apply()
+    fun lastGame(ctx: Context): String? = sp(ctx).getString("last_game", null)
+    fun setLastGame(ctx: Context, pkg: String) = sp(ctx).edit().putString("last_game", pkg).apply()
+
     fun globalScale(ctx: Context) = sp(ctx).getFloat("global_scale", 1f)
     fun setGlobalScale(ctx: Context, s: Float) = sp(ctx).edit().putFloat("global_scale", s).apply()
 }

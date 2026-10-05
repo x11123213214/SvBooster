@@ -53,7 +53,9 @@ import com.turbo.gamebooster.shell.Shell
 import com.turbo.gamebooster.ui.Amber
 import com.turbo.gamebooster.ui.FilesScreen
 import com.turbo.gamebooster.ui.GamesScreen
+import com.turbo.gamebooster.ui.Muted
 import com.turbo.gamebooster.ui.Neon
+import com.turbo.gamebooster.ui.SvLogo
 import com.turbo.gamebooster.ui.PickerScreen
 import com.turbo.gamebooster.ui.ProfileScreen
 import com.turbo.gamebooster.ui.SetupScreen
@@ -124,7 +126,7 @@ private fun App(tick: Int, refresh: () -> Unit) {
     val mode = remember(tick) { Shell.mode() }
 
     when (val s = screen) {
-        is Screen.Profile -> ProfileScreen(s.pkg, mode) { screen = Screen.Tabs; refresh() }
+        is Screen.Profile -> ProfileScreen(s.pkg, mode, onSetup = { screen = Screen.Tabs; tab = 2 }) { screen = Screen.Tabs; refresh() }
         Screen.Picker -> PickerScreen { screen = Screen.Tabs; refresh() }
         Screen.Tabs -> Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
@@ -132,7 +134,7 @@ private fun App(tick: Int, refresh: () -> Unit) {
             bottomBar = {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     listOf(
-                        Triple("Jogos", Icons.Filled.SportsEsports, 0),
+                        Triple("Início", Icons.Filled.SportsEsports, 0),
                         Triple("Ferramentas", Icons.Filled.Build, 1),
                         Triple("Arquivos", Icons.Filled.Folder, 3),
                         Triple("Ajustes", Icons.Filled.Settings, 2),
@@ -150,7 +152,7 @@ private fun App(tick: Int, refresh: () -> Unit) {
         ) { pad ->
             Box(Modifier.padding(pad).fillMaxSize()) {
                 when (tab) {
-                    0 -> GamesScreen(tick, onOpen = { screen = Screen.Profile(it) }, onAdd = { screen = Screen.Picker })
+                    0 -> GamesScreen(tick, mode, onOpen = { screen = Screen.Profile(it) }, onAdd = { screen = Screen.Picker }, onSetup = { tab = 2 })
                     1 -> ToolsScreen(mode)
                     3 -> FilesScreen(tick, refresh)
                     else -> SetupScreen(tick, refresh)
@@ -170,10 +172,11 @@ private fun Header(mode: Shell.Mode) {
             .statusBarsPadding()
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Icon(Icons.Filled.Bolt, null, tint = Neon, modifier = Modifier.size(28.dp))
-        Spacer(Modifier.width(6.dp))
+        SvLogo(36.dp)
+        Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text("SV BOOSTER", fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = 1.sp)
+            Text("Mais FPS, menos travadas", color = Muted, fontSize = 11.sp)
         }
         when (mode) {
             Shell.Mode.SHIZUKU -> Tag("SHIZUKU ✓", Neon)

@@ -17,7 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -36,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
@@ -57,6 +61,48 @@ val Cyan = Color(0xFF00D1FF)
 val Amber = Color(0xFFFFB020)
 val Danger = Color(0xFFFF4D5E)
 val Muted = Color(0xFF8A96A3)
+val Pink = Color(0xFFFF4FD8)
+
+val NeonBrush = Brush.horizontalGradient(listOf(Color(0xFF39FF88), Color(0xFF00D1FF)))
+val HeroBrush = Brush.linearGradient(listOf(Color(0xFF12301F), Color(0xFF0E1C2A), Color(0xFF131A22)))
+
+/** Botão principal com degradê neon. */
+@Composable
+fun BoostButton(running: Boolean, text: String, onClick: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(NeonBrush)
+            .clickable(enabled = !running) { onClick() }
+    ) {
+        if (running) {
+            CircularProgressIndicator(color = Color.Black, strokeWidth = 3.dp, modifier = Modifier.size(26.dp))
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Bolt, null, tint = Color.Black)
+                Spacer(Modifier.width(8.dp))
+                Text(text, color = Color.Black, fontWeight = FontWeight.Black, fontSize = 17.sp, letterSpacing = 1.sp)
+            }
+        }
+    }
+}
+
+/** Logo "SV" do app. */
+@Composable
+fun SvLogo(size: Dp = 36.dp) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(size / 3.2f))
+            .background(NeonBrush)
+    ) {
+        Text("SV", color = Color.Black, fontWeight = FontWeight.Black, fontSize = (size.value * 0.42f).sp)
+    }
+}
 
 @Composable
 fun TurboTheme(content: @Composable () -> Unit) {

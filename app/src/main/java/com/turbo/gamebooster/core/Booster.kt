@@ -31,6 +31,7 @@ object Booster {
     /** Aplica o perfil do jogo e abre o jogo. */
     suspend fun boostAndLaunch(ctx: Context, pkg: String, p: GameProfile, log: (String) -> Unit) {
         val shell = Shell.hasShell()
+        Prefs.setLastGame(ctx, pkg)
 
         if (p.killBackground) {
             val freed = Cleaner.clean(ctx, exclude = pkg)
