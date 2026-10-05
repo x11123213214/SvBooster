@@ -104,7 +104,7 @@ class WifiAdbTest {
         Log.i("SvTest", "wireless-activities: " + sh("dumpsys package com.android.settings | grep -iE 'Wireless|AdbWireless|DEVELOPMENT' | head -20").replace("\n", " | "))
 
         // Vai até Opções do desenvolvedor → Depuração por Wi-Fi e liga a chave (como uma pessoa faria)
-        for (attempt in 1..8) {
+        for (attempt in 1..14) {
             closeShade()
             when {
                 device.hasObject(By.textContains("Pair device with pairing code")) -> break
