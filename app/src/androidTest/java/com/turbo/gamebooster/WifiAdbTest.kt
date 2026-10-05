@@ -76,6 +76,8 @@ class WifiAdbTest {
         // A pergunta "permitir nesta rede?" aparece ao ligar a depuração: responde primeiro.
         allowNetworkIfAsked()
         Log.i("SvTest", "adb_wifi_enabled=" + sh("settings get global adb_wifi_enabled").trim())
+        Log.i("SvTest", "dev-activities: " + sh("cmd package query-activities --brief -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS").replace("\n", " | "))
+        Log.i("SvTest", "wireless-activities: " + sh("dumpsys package com.android.settings | grep -iE 'Wireless|AdbWireless|DEVELOPMENT' | head -20").replace("\n", " | "))
 
         // Abre Opções do desenvolvedor → Depuração por Wi-Fi (tenta até 3 vezes)
         for (attempt in 1..3) {
@@ -85,6 +87,15 @@ class WifiAdbTest {
             )
             device.wait(Until.hasObject(By.text("Developer options")), 6000)
             allowNetworkIfAsked()
+            if (!device.hasObject(By.text("Use developer options")) && !device.hasObject(By.text("Wireless debugging"))) {
+                // Caminho manual: Configurações → Sistema → Opções do desenvolvedor
+                try { UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("System") } catch (_: Exception) {}
+                device.findObject(By.text("System"))?.click()
+                device.wait(Until.hasObject(By.textContains("Developer options")), 6000)
+                try { UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("Developer options") } catch (_: Exception) {}
+                device.findObject(By.text("Developer options"))?.click()
+                device.wait(Until.hasObject(By.text("Use developer options")), 6000)
+            }
             try {
                 UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("Wireless debugging")
             } catch (_: Exception) {
