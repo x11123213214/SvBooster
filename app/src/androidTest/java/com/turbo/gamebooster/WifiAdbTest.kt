@@ -135,7 +135,10 @@ class WifiAdbTest {
                     }
                 }
                 else -> {
-                    // Entra pelo menu: Configurações → Sistema → Opções do desenvolvedor
+                    // Abre a tela de Opções do desenvolvedor direto; se não der, entra pelo menu.
+                    sh("am start -W -n 'com.android.settings/.Settings\$DevelopmentSettingsDashboardActivity'")
+                    device.wait(Until.hasObject(By.text("Use developer options")), 5000)
+                    if (device.hasObject(By.text("Use developer options"))) continue
                     sh("am start -W -a android.settings.SETTINGS")
                     device.wait(Until.hasObject(By.pkg("com.android.settings").depth(0)), 6000)
                     allowNetworkIfAsked()
