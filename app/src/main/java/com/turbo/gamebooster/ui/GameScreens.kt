@@ -206,7 +206,7 @@ fun GamesScreen(
                         Box(Modifier.clickable { onOpen(heroPkg) }) { AppIcon(heroPkg, 64.dp) }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("PRONTO PARA JOGAR", color = Neon, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                            Text("PRONTO PARA JOGAR", color = Neon, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp, maxLines = 1)
                             Text(label, fontSize = 20.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
                                 (levelOf(prof)?.name?.let { "Turbo $it · " } ?: "") + summary(prof),

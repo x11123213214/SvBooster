@@ -1,0 +1,118 @@
+package com.turbo.gamebooster
+
+import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.os.ParcelFileDescriptor
+import android.provider.Settings
+import android.util.Log
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.UiScrollable
+import androidx.test.uiautomator.UiSelector
+import androidx.test.uiautomator.Until
+import com.turbo.gamebooster.core.Tweaks
+import com.turbo.gamebooster.shell.AdbShell
+import com.turbo.gamebooster.shell.Shell
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import java.io.File
+import java.io.FileOutputStream
+
+/**
+ * Teste de ponta a ponta do Modo Turbo como no celular de verdade:
+ * liga a Depuração por Wi-Fi, abre "Parear com código", lê o código da tela,
+ * pareia pelo Sv Booster, conecta e roda comandos pela conexão própria do app.
+ */
+@RunWith(AndroidJUnit4::class)
+class WifiAdbTest {
+    private val inst = InstrumentationRegistry.getInstrumentation()
+    private val ctx: Context = inst.targetContext
+    private val device = UiDevice.getInstance(inst)
+
+    private fun sh(script: String): String {
+        val f = File(ctx.getExternalFilesDir(null), "w${System.nanoTime()}.sh")
+        f.writeText("exec 2>&1\n$script\n")
+        val pfd = inst.uiAutomation.executeShellCommand("sh ${f.absolutePath}")
+        val text = ParcelFileDescriptor.AutoCloseInputStream(pfd).bufferedReader().readText()
+        f.delete()
+        return text
+    }
+
+    private fun shot(name: String) {
+        Thread.sleep(600)
+        val bmp: Bitmap = inst.uiAutomation.takeScreenshot() ?: return
+        val f = File(ctx.getExternalFilesDir(null), name)
+        FileOutputStream(f).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        sh("mkdir -p /data/local/tmp/svshots && cp ${f.absolutePath} /data/local/tmp/svshots/$name")
+    }
+
+    private fun screenTexts(): List<String> =
+        device.findObjects(By.textContains("")).mapNotNull { it.text }
+
+    @Test
+    fun w1_pareiaConectaERodaComandos() {
+        Shell.testExecutor = null
+        sh("settings put global development_settings_enabled 1; settings put global adb_wifi_enabled 1")
+        Thread.sleep(3000)
+        Log.i("SvTest", "wifi: " + sh("dumpsys wifi | grep -m1 'mWifiInfo'").take(200))
+
+        // Abre Opções do desenvolvedor → Depuração por Wi-Fi
+        ctx.startActivity(
+            Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        )
+        device.wait(Until.hasObject(By.pkg("com.android.settings").depth(0)), 8000)
+        try {
+            UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("Wireless debugging")
+        } catch (_: Exception) {
+        }
+        device.findObject(By.text("Wireless debugging"))?.click()
+        device.wait(Until.hasObject(By.textContains("Pair device with pairing code")), 8000)
+        shot("w1_depuracao_wifi.png")
+        device.findObject(By.textContains("Pair device with pairing code"))?.click()
+        device.wait(Until.hasObject(By.textContains("pairing code")), 8000)
+        Thread.sleep(1500)
+        shot("w2_codigo_pareamento.png")
+
+        val texts = screenTexts()
+        Log.i("SvTest", "tela: $texts")
+        val code = texts.firstNotNullOfOrNull { Regex("^\\d{6}$").find(it.trim())?.value }
+        val port = texts.firstNotNullOfOrNull { Regex(":(\\d{4,5})$").find(it.trim())?.groupValues?.get(1)?.toInt() }
+        assertTrue("não achei código/porta na tela: $texts", code != null && port != null)
+
+        val paired = runBlocking { withTimeout(30_000) { AdbShell.pair(port!!, code!!) } }
+        Log.i("SvTest", "pareado=$paired erro=${AdbShell.lastError}")
+        shot("w3_depois_do_pareamento.png")
+        assertTrue("pareamento falhou: ${AdbShell.lastError}", paired)
+
+        val connected = runBlocking { withTimeout(40_000) { AdbShell.connect() } }
+        Log.i("SvTest", "conectado=$connected erro=${AdbShell.lastError}")
+        assertTrue("conexão falhou: ${AdbShell.lastError}", connected)
+        assertTrue("modo deveria ser ADB: ${Shell.mode()}", Shell.mode() == Shell.Mode.ADB)
+
+        val r = runBlocking { withTimeout(20_000) { Shell.run("id -un; wm size") } }
+        Log.i("SvTest", "comando via Wi-Fi: $r")
+        assertTrue("comando via Wi-Fi falhou: $r", r.ok && r.out.contains("shell"))
+
+        val msg = runBlocking { withTimeout(20_000) { Tweaks.applyGlobalResolution(ctx, 0.5f) } }
+        val size = sh("wm size")
+        Log.i("SvTest", "resolução via Wi-Fi: $msg / $size")
+        assertTrue("resolução via Wi-Fi não mudou: $msg / $size", size.contains("Override size"))
+        runBlocking { Tweaks.resetGlobalResolution(ctx) }
+
+        val ok = runBlocking { withTimeout(20_000) { Tweaks.disableAnimations(ctx) } }
+        assertTrue("animações via Wi-Fi: ${Tweaks.lastError}", ok && Tweaks.animationsOff(ctx))
+        runBlocking { Tweaks.restoreAnimations(ctx) }
+
+        // Reconexão depois de perder a conexão (como quando o app é reaberto)
+        val again = runBlocking { withTimeout(20_000) { AdbShell.selfTest() } }
+        Log.i("SvTest", "autoteste: $again")
+        assertTrue("autoteste: $again", again.startsWith("OK"))
+        sh("wm size reset; wm density reset")
+    }
+}

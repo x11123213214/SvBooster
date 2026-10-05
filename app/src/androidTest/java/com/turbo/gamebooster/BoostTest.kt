@@ -174,7 +174,7 @@ class BoostTest {
         ActivityScenario.launch(MainActivity::class.java).use {
             Thread.sleep(2500)
             shot("1_inicio.png")
-            device.findObject(By.text("Ferramentas"))?.click()
+            device.findObject(By.text("Extras"))?.click()
             shot("2_ferramentas.png")
             device.findObject(By.text("Ajustes"))?.click()
             shot("3_ajustes.png")

@@ -143,13 +143,13 @@ private fun App(tick: Int, refresh: () -> Unit) {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     listOf(
                         Triple("Início", Icons.Filled.SportsEsports, 0),
-                        Triple("Ferramentas", Icons.Filled.Build, 1),
+                        Triple("Extras", Icons.Filled.Build, 1),
                         Triple("Arquivos", Icons.Filled.Folder, 3),
                         Triple("Ajustes", Icons.Filled.Settings, 2),
                     ).forEach { (label, icon, i) ->
                         NavigationBarItem(
                             selected = tab == i, onClick = { tab = i },
-                            icon = { Icon(icon, null) }, label = { Text(label) },
+                            icon = { Icon(icon, null) }, label = { Text(label, maxLines = 1, fontSize = 12.sp) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = Color.Black, indicatorColor = Neon
                             )

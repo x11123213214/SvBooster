@@ -25,6 +25,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -120,8 +121,12 @@ fun TurboTheme(content: @Composable () -> Unit) {
             surfaceContainerHighest = Color(0xFF1C2530),
             error = Danger,
         ),
-        content = content
-    )
+    ) {
+        // Superfície base: garante texto claro em todas as telas.
+        Surface(color = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground) {
+            content()
+        }
+    }
 }
 
 @Composable
