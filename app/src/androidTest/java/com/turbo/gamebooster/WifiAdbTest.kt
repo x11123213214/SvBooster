@@ -93,7 +93,13 @@ class WifiAdbTest {
                     device.wait(Until.hasObject(By.text("Use wireless debugging")), 6000)
                 }
                 device.hasObject(By.text("Use developer options")) -> {
-                    try { UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("Wireless debugging") } catch (_: Exception) {}
+                    // Volta ao topo e desce devagar até achar "Wireless debugging"
+                    try { UiScrollable(UiSelector().scrollable(true)).flingToBeginning(10) } catch (_: Exception) {}
+                    var n = 0
+                    while (!device.hasObject(By.text("Wireless debugging")) && n < 25) {
+                        device.swipe(device.displayWidth / 2, device.displayHeight * 3 / 4, device.displayWidth / 2, device.displayHeight / 2, 20)
+                        Thread.sleep(300); n++
+                    }
                 }
                 else -> {
                     ctx.startActivity(
