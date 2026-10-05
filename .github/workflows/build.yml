@@ -1,12 +1,14 @@
 name: Build APK
 on:
   push:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -14,26 +16,64 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - name: Compilar APK
+
+      - name: Compilar APK e testes
         shell: bash
         run: |
           set -o pipefail
           chmod +x gradlew
-          ./gradlew assembleDebug 2>&1 | tee build.log
-      - name: Mostrar erros
+          ./gradlew assembleDebug assembleDebugAndroidTest 2>&1 | tee build.log
+      - name: Mostrar erros de compilação
         if: failure()
         shell: bash
         run: |
           { grep -E "^e: " build.log || true; grep -A6 "What went wrong" build.log || true; } | grep -v "^--$" | head -9 | while IFS= read -r l; do echo "::error::${l:0:1500}"; done
+
+      - name: Ativar KVM (emulador rápido)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Testar no celular virtual (Android 13)
+        id: emu
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb shell rm -rf /data/local/tmp/svshots || true
+            ./gradlew connectedDebugAndroidTest > test.log 2>&1; echo $? > test.rc
+            mkdir -p results/prints
+            adb pull /data/local/tmp/svshots results/prints || true
+            adb logcat -d -s SvTest:I AndroidRuntime:E TestRunner:* > results/logcat.txt || true
+
+      - name: Resultado dos testes
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p results
+          cp test.log results/ 2>/dev/null || true
+          find app/build/outputs/androidTest-results -name "*.xml" -exec cp {} results/ \; 2>/dev/null || true
+          RC=$(cat test.rc 2>/dev/null || echo 1)
+          echo "rc=$RC" > results/RESULTADO.txt
+          grep -hoE 'tests="[0-9]+"|failures="[0-9]+"|errors="[0-9]+"' results/*.xml >> results/RESULTADO.txt 2>/dev/null || true
+          grep -hA3 "<failure" results/*.xml | head -40 | while IFS= read -r l; do echo "::error::${l:0:1200}"; done || true
+          cd results
+          git init -q && git checkout -q -b test-results
+          git -c user.name=ci -c user.email=ci@example.com add -A
+          git -c user.name=ci -c user.email=ci@example.com commit -qm "Resultados ${{ github.run_number }}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" test-results
+          test "$RC" = "0"
+
       - name: Renomear
         run: cp app/build/outputs/apk/debug/app-debug.apk SvBooster.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: SvBooster-apk
-          path: SvBooster.apk
-      - name: Publicar em Releases (download direto pelo celular)
+      - name: Publicar em Releases (só se todos os testes passarem)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Sv Booster build ${{ github.run_number }}
+          name: Sv Booster build ${{ github.run_number }} (testado)
           files: SvBooster.apk

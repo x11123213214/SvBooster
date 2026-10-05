@@ -21,6 +21,10 @@ object Shell {
     @Volatile
     var rootAvailable = false
 
+    /** Só para os testes automáticos: executor de comandos injetado. */
+    @Volatile
+    var testExecutor: ((String) -> Result)? = null
+
     fun shizukuRunning(): Boolean = try {
         Shizuku.pingBinder()
     } catch (t: Throwable) {
@@ -42,6 +46,7 @@ object Shell {
     }
 
     fun mode(): Mode = when {
+        testExecutor != null -> Mode.ROOT
         shizukuGranted() -> Mode.SHIZUKU
         rootAvailable -> Mode.ROOT
         AdbShell.connected || AdbShell.paired() -> Mode.ADB
@@ -68,6 +73,7 @@ object Shell {
      */
     suspend fun run(vararg cmds: String, timeoutMs: Long = 12_000): Result = withContext(Dispatchers.IO) {
         val script = cmds.joinToString("\n")
+        testExecutor?.let { return@withContext it(script) }
         when (mode()) {
             Mode.ADB -> AdbShell.exec(script, timeoutMs)
             Mode.NONE -> Result(-1, "", "Modo Turbo desativado (aba Ajustes)")
