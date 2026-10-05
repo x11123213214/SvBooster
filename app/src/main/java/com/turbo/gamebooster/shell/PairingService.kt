@@ -68,7 +68,7 @@ class PairingService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun show(title: String, text: String? = null, ask: Boolean = false) {
+    private fun show(title: String, text: String? = null, ask: Boolean = false, alert: Boolean = false) {
         status = title
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CH, "Pareamento do modo turbo", NotificationManager.IMPORTANCE_HIGH))
@@ -78,7 +78,7 @@ class PairingService : Service() {
             .setContentText(text ?: if (port > 0) "Pareamento encontrado. Toque em \"Digitar código\"." else null)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text ?: ""))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setOnlyAlertOnce(true)
+            .setOnlyAlertOnce(!alert)
             .setOngoing(ask)
         if (ask) {
             val ri = RemoteInput.Builder(KEY).setLabel("Código de pareamento").build()
@@ -111,7 +111,7 @@ class PairingService : Service() {
                     override fun onResolveFailed(si: NsdServiceInfo, errorCode: Int) {}
                     override fun onServiceResolved(si: NsdServiceInfo) {
                         port = si.port
-                        scope.launch { show("Pareamento encontrado!", "Toque em \"Digitar código\" e escreva o código que aparece na tela.", ask = true) }
+                        scope.launch { show("Pareamento encontrado!", "Toque em \"Digitar código\" e escreva o código que aparece na tela.", ask = true, alert = true) }
                     }
                 })
             }
@@ -137,12 +137,12 @@ class PairingService : Service() {
             if (AdbShell.pair(port, code)) {
                 show("Pareado! Conectando…")
                 val ok = AdbShell.connect()
-                show(if (ok) "Modo turbo ativado ✓" else "Pareado ✓ — abra o Sv Booster", if (ok) "Já pode voltar ao app." else AdbShell.lastError)
+                show(if (ok) "Modo turbo ativado ✓" else "Pareado ✓ — abra o Sv Booster", if (ok) "Já pode voltar ao app." else AdbShell.lastError, alert = true)
                 delay(4000)
                 ServiceCompat.stopForeground(this@PairingService, ServiceCompat.STOP_FOREGROUND_DETACH)
                 stopSelf()
             } else {
-                show("Código errado", "${AdbShell.lastError ?: ""}\nConfira o código e tente de novo.", ask = true)
+                show("Código errado", "${AdbShell.lastError ?: ""}\nConfira o código e tente de novo.", ask = true, alert = true)
             }
         }
     }

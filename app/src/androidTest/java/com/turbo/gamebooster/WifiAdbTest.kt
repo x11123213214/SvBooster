@@ -78,13 +78,10 @@ class WifiAdbTest {
 
         // Como no uso real: abre o Sv Booster e toca em "Começar pareamento" (inicia o serviço da notificação).
         sh("pm grant ${ctx.packageName} android.permission.POST_NOTIFICATIONS")
-        androidx.test.core.app.ActivityScenario.launch(MainActivity::class.java)
-        Thread.sleep(1500)
-        PairingService.start(ctx)
-        Thread.sleep(1000)
+        // Permite ao app iniciar o serviço de pareamento estando atrás das Configurações (como quando você toca no botão).
+        sh("appops set ${ctx.packageName} SYSTEM_ALERT_WINDOW allow")
         device.pressHome()
-        Thread.sleep(1000)
-        sh("cmd statusbar collapse")
+        Thread.sleep(800)
 
         // A pergunta "permitir nesta rede?" aparece ao ligar a depuração: responde primeiro.
         allowNetworkIfAsked()
@@ -159,6 +156,10 @@ class WifiAdbTest {
         val port = texts.firstNotNullOfOrNull { Regex(":(\\d{4,5})$").find(it.trim())?.groupValues?.get(1)?.toInt() }
         assertTrue("não achei código/porta na tela: $texts", code != null && port != null)
 
+        // Agora inicia o serviço do Sv Booster (o mesmo do botão "Começar pareamento").
+        PairingService.start(ctx)
+        Thread.sleep(1500)
+        sh("cmd statusbar collapse")
         // O serviço tem que achar a porta sozinho (mDNS)…
         var w = 0
         while (!PairingService.status.contains("encontrado") && w < 20) { Thread.sleep(500); w++ }
