@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.os.Build
+import android.os.Environment
+import android.os.StatFs
 import android.provider.Settings
 import android.view.Display
 import com.turbo.gamebooster.overlay.OverlayService
@@ -13,6 +15,7 @@ import com.turbo.gamebooster.shell.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -28,76 +31,92 @@ object Booster {
 
     private fun f2(v: Float) = String.format(Locale.US, "%.2f", v)
 
-    /** Aplica o perfil do jogo e abre o jogo. */
+    /**
+     * Aplica o perfil e abre o jogo. O jogo SEMPRE abre no final, mesmo que algum ajuste falhe.
+     */
     suspend fun boostAndLaunch(ctx: Context, pkg: String, p: GameProfile, log: (String) -> Unit) {
-        val shell = Shell.hasShell()
         Prefs.setLastGame(ctx, pkg)
+        try {
+            val done = withTimeoutOrNull(40_000) { applyProfile(ctx, pkg, p, log) }
+            if (done == null) log("Alguns ajustes demoraram demais e foram pulados")
+        } catch (e: Throwable) {
+            log("Erro nos ajustes: ${e.message ?: e.javaClass.simpleName}")
+        }
+        log(if (launch(ctx, pkg)) "Abrindo o jogo… bom jogo! 🎮" else "Não consegui abrir o jogo (ele ainda está instalado?)")
+    }
 
+    private suspend fun applyProfile(ctx: Context, pkg: String, p: GameProfile, log: (String) -> Unit) {
         if (p.killBackground) {
-            val freed = Cleaner.clean(ctx, exclude = pkg)
-            log("Apps em segundo plano fechados (+$freed MB livres)")
+            val r = Cleaner.clean(ctx, exclude = pkg)
+            log("Limpeza: +${r.ramMb} MB de RAM" + (if (r.cacheMb > 0) ", ${r.cacheMb} MB de cache" else ""))
         }
 
+        // Testa o Modo Turbo antes de tudo, para não esperar à toa.
+        var shell = Shell.hasShell()
         if (shell) {
-            Shell.run("am force-stop $pkg") // o jogo precisa reiniciar para pegar a nova resolução
-            val sdk = Build.VERSION.SDK_INT
-            when {
-                sdk >= 33 -> {
-                    Shell.run("cmd game reset $pkg")
-                    val fpsArg = if (p.fps > 0) " --fps ${p.fps}" else ""
-                    val r = Shell.run("cmd game set --mode ${p.mode} --downscale ${f2(p.downscale)}$fpsArg $pkg")
-                    Shell.run("cmd game mode ${modeName(p.mode)} $pkg")
-                    if (r.ok && r.err.isBlank()) {
-                        log("Resolução ${(p.downscale * 100).roundToInt()}%" +
-                            (if (p.fps > 0) ", FPS travado em ${p.fps}" else "") +
-                            ", modo ${modeName(p.mode)}")
-                    } else {
-                        log("O Android recusou a mudança por app: ${(r.err + r.out).trim().take(160)}")
-                        log("Dica: use 'Resolução global' na aba Ferramentas — funciona em qualquer app.")
-                    }
-                }
-                sdk >= 31 -> {
-                    val r = Shell.run(
-                        "device_config put game_overlay $pkg mode=${p.mode},downscaleFactor=${f2(p.downscale)}" +
-                            (if (p.fps > 0) ",fps=${p.fps}" else ""),
-                        "cmd game mode ${modeName(p.mode)} $pkg"
-                    )
-                    log(if (r.ok) "Resolução ${(p.downscale * 100).roundToInt()}% aplicada (Android 12)"
-                    else "Falha: ${r.err.take(160)}")
-                }
-                else -> log("Resolução por app exige Android 12+. Use 'Resolução global' em Ferramentas.")
+            val t = Shell.run("echo ok", timeoutMs = 10_000)
+            if (!t.ok) {
+                shell = false
+                log("⚠ Modo Turbo não respondeu: ${t.err.ifBlank { t.out }.take(120)}")
+                log("Abra Ajustes → Modo Turbo → Conectar agora")
             }
-            if (p.noAnimations && Tweaks.disableAnimations(ctx)) log("Animações do sistema desligadas")
-            if (p.maxRefresh && Tweaks.setMaxRefresh(ctx, true)) log("Tela travada em ${Tweaks.maxRefreshRate(ctx).roundToInt()} Hz")
         } else if (p.downscale < 1f || p.fps > 0 || p.noAnimations || p.maxRefresh) {
-            log("Modo Turbo desativado — resolução, FPS, animações e Hz foram pulados (ative na aba Ajustes)")
+            log("⚠ Modo Turbo desativado: resolução, FPS, animações e Hz foram pulados (ative em Ajustes)")
         }
-
-        if (p.dnd) log(if (Tweaks.setDnd(ctx, true)) "Não perturbe ligado" else "Sem acesso ao Não perturbe (aba Ajustes)")
 
         var watch: String? = null
-        if (p.forceGlobal && shell && p.downscale < 1f) {
-            log(Tweaks.applyGlobalResolution(ctx, p.downscale) + " (volta ao normal quando você sair do jogo)")
-            watch = pkg
+        if (shell) {
+            Shell.run("am force-stop $pkg") // reinicia o jogo para ele pegar a nova configuração
+            val sdk = Build.VERSION.SDK_INT
+
+            // FPS e modo do jogo (Game Mode do Android) — alguns jogos ignoram, então é um bônus.
+            if (sdk >= 33) {
+                Shell.run("cmd game reset $pkg")
+                val fpsArg = if (p.fps > 0) " --fps ${p.fps}" else ""
+                val r = Shell.run("cmd game set --mode ${p.mode} --downscale ${f2(p.downscale)}$fpsArg $pkg", "cmd game mode ${modeName(p.mode)} $pkg")
+                if (p.fps > 0) log(if (r.ok) "FPS limitado em ${p.fps}" else "Este jogo não aceita limite de FPS pelo sistema")
+            } else if (sdk >= 31) {
+                Shell.run(
+                    "device_config put game_overlay $pkg mode=${p.mode},downscaleFactor=${f2(p.downscale)}" +
+                        (if (p.fps > 0) ",fps=${p.fps}" else ""),
+                    "cmd game mode ${modeName(p.mode)} $pkg"
+                )
+            }
+
+            // Resolução: abaixa a tela inteira enquanto o jogo estiver aberto (funciona em qualquer jogo).
+            if (p.downscale < 1f) {
+                log(Tweaks.applyGlobalResolution(ctx, p.downscale))
+                watch = pkg
+            } else if (Prefs.globalScale(ctx) < 0.99f) {
+                Tweaks.resetGlobalResolution(ctx)
+            }
+
+            if (p.noAnimations) log(if (Tweaks.disableAnimations(ctx)) "Animações desligadas" else "Animações: ${Tweaks.lastError}")
+            if (p.maxRefresh) log(if (Tweaks.setMaxRefresh(ctx, true)) "Tela em ${Tweaks.maxRefreshRate(ctx).roundToInt()} Hz" else "Hz: ${Tweaks.lastError}")
         }
+
+        if (p.dnd) log(if (Tweaks.setDnd(ctx, true)) "Não perturbe ligado" else "Sem acesso ao Não perturbe (Ajustes → Permissões)")
 
         val canOverlay = Settings.canDrawOverlays(ctx)
-        if ((p.hud || p.crosshair) && !canOverlay) log("Sem permissão de sobreposição — HUD/mira não exibidos")
+        if ((p.hud || p.crosshair) && !canOverlay) log("Sem permissão de sobreposição: HUD/mira não exibidos")
         if ((p.hud || p.crosshair) && canOverlay || watch != null) {
-            OverlayService.start(ctx, p.hud && canOverlay, p.crosshair && canOverlay, watch)
-            if (canOverlay && (p.hud || p.crosshair)) {
-                log("Sobreposição ativa: " + listOfNotNull(if (p.hud) "HUD" else null, if (p.crosshair) "mira" else null).joinToString(" + "))
+            try {
+                OverlayService.start(ctx, p.hud && canOverlay, p.crosshair && canOverlay, watch)
+            } catch (e: Throwable) {
+                log("Sobreposição: ${e.message}")
             }
         }
-
-        if (launch(ctx, pkg)) log("Abrindo o jogo… bom jogo!") else log("Não consegui abrir o app")
     }
 
     fun launch(ctx: Context, pkg: String): Boolean {
-        val i = ctx.packageManager.getLaunchIntentForPackage(pkg) ?: return false
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        ctx.startActivity(i)
-        return true
+        val pm = ctx.packageManager
+        val i = pm.getLaunchIntentForPackage(pkg) ?: pm.getLeanbackLaunchIntentForPackage(pkg) ?: return false
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        return try {
+            ctx.startActivity(i); true
+        } catch (e: Throwable) {
+            false
+        }
     }
 
     suspend fun resetGame(pkg: String): Boolean {
@@ -111,10 +130,22 @@ object Booster {
 }
 
 object Cleaner {
-    /** Fecha processos em segundo plano. Retorna MB de RAM liberados (aprox.). */
-    suspend fun clean(ctx: Context, exclude: String? = null): Long = withContext(Dispatchers.IO) {
-        val before = SystemInfo.availRamMb(ctx)
-        if (Shell.hasShell()) Shell.run("am kill-all")
+    data class Res(val ramMb: Long, val cacheMb: Long)
+
+    private fun freeStorageMb() = try {
+        StatFs(Environment.getDataDirectory().path).availableBytes / 1_048_576
+    } catch (e: Exception) {
+        0L
+    }
+
+    /** Fecha apps em segundo plano e (com Modo Turbo) limpa o cache de todos os apps. */
+    suspend fun clean(ctx: Context, exclude: String? = null): Res = withContext(Dispatchers.IO) {
+        val ramBefore = SystemInfo.availRamMb(ctx)
+        val diskBefore = freeStorageMb()
+        if (Shell.hasShell()) {
+            Shell.run("pm trim-caches 1000G", timeoutMs = 20_000)
+            Shell.run("am kill-all", timeoutMs = 8_000)
+        }
         val am = ctx.getSystemService(ActivityManager::class.java)
         for (app in AppRepo.launchableApps(ctx)) {
             if (app.pkg != exclude) try {
@@ -123,11 +154,21 @@ object Cleaner {
             }
         }
         delay(900)
-        (SystemInfo.availRamMb(ctx) - before).coerceAtLeast(0)
+        Res(
+            (SystemInfo.availRamMb(ctx) - ramBefore).coerceAtLeast(0),
+            (freeStorageMb() - diskBefore).coerceAtLeast(0)
+        )
     }
 }
 
 object Tweaks {
+    @Volatile
+    var lastError: String = ""
+
+    private fun fail(r: Shell.Result): Boolean {
+        lastError = r.err.ifBlank { r.out }.ifBlank { "erro ${r.code}" }.take(150)
+        return false
+    }
     private val ANIM_KEYS = listOf("window_animation_scale", "transition_animation_scale", "animator_duration_scale")
 
     fun animationsOff(ctx: Context): Boolean =
@@ -141,14 +182,15 @@ object Tweaks {
             }
             Prefs.saveAnim(ctx, vals)
         }
-        return Shell.run(*ANIM_KEYS.map { "settings put global $it 0" }.toTypedArray()).ok
+        val r = Shell.run(*ANIM_KEYS.map { "settings put global $it 0" }.toTypedArray())
+        return if (r.ok) true else fail(r)
     }
 
     suspend fun restoreAnimations(ctx: Context): Boolean {
         if (!Shell.hasShell()) return false
         val vals = Prefs.savedAnim(ctx) ?: listOf("1.0", "1.0", "1.0")
         val r = Shell.run(*ANIM_KEYS.mapIndexed { i, k -> "settings put global $k ${vals[i]}" }.toTypedArray())
-        Prefs.clearAnim(ctx)
+        if (r.ok) Prefs.clearAnim(ctx) else fail(r)
         return r.ok
     }
 
@@ -161,11 +203,17 @@ object Tweaks {
         if (!Shell.hasShell()) return false
         val r = if (on) {
             val hz = maxRefreshRate(ctx).roundToInt()
-            Shell.run("settings put system peak_refresh_rate $hz.0", "settings put system min_refresh_rate $hz.0")
+            // Padrão do Android + chaves usadas por Xiaomi/Poco e Samsung (as que não existem são ignoradas).
+            Shell.run(
+                "settings put system peak_refresh_rate $hz.0",
+                "settings put system min_refresh_rate $hz.0",
+                "settings put secure user_refresh_rate $hz 2>/dev/null; true",
+                "settings put system user_refresh_rate $hz 2>/dev/null; true"
+            )
         } else {
-            Shell.run("settings delete system min_refresh_rate")
+            Shell.run("settings delete system min_refresh_rate", "settings delete secure user_refresh_rate 2>/dev/null; true")
         }
-        if (r.ok) Prefs.setMaxHz(ctx, on)
+        if (r.ok) Prefs.setMaxHz(ctx, on) else fail(r)
         return r.ok
     }
 

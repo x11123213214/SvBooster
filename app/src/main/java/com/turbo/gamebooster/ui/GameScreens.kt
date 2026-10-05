@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.AddToHomeScreen
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.DoNotDisturbOn
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.ExpandLess
@@ -158,7 +159,7 @@ fun GamesScreen(
     }
     val heroPkg = Prefs.lastGame(ctx)?.takeIf { last -> games.any { it.first == last } } ?: games.firstOrNull()?.first
     var boosting by remember { mutableStateOf(false) }
-    var heroMsg by remember { mutableStateOf<String?>(null) }
+    var heroLog by remember { mutableStateOf(listOf<String>()) }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
@@ -218,11 +219,14 @@ fun GamesScreen(
                     BoostButton(running = boosting, text = "JOGAR COM BOOST") {
                         boosting = true
                         scope.launch {
-                            Booster.boostAndLaunch(ctx, heroPkg, prof) { heroMsg = it }
+                            heroLog = emptyList()
+                            Booster.boostAndLaunch(ctx, heroPkg, prof) { heroLog = heroLog + it }
                             boosting = false
                         }
                     }
-                    heroMsg?.let { Text(it, color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp)) }
+                    if (heroLog.isNotEmpty()) Column(Modifier.padding(top = 10.dp)) {
+                        heroLog.forEach { Text("› $it", color = if (it.startsWith("⚠")) Amber else Color(0xFFB8C4D0), fontSize = 12.sp) }
+                    }
                 }
             }
         }
@@ -464,9 +468,9 @@ fun ProfileScreen(pkg: String, mode: Shell.Mode, onSetup: () -> Unit, onBack: ()
                 QuickToggle(Icons.Filled.Visibility, "HUD", p.hud, modifier = Modifier.weight(1f)) { p = p.copy(hud = !p.hud) }
                 QuickToggle(Icons.Filled.CenterFocusStrong, "Mira", p.crosshair, modifier = Modifier.weight(1f)) { p = p.copy(crosshair = !p.crosshair) }
                 QuickToggle(Icons.Filled.DoNotDisturbOn, "Silêncio", p.dnd, modifier = Modifier.weight(1f)) { p = p.copy(dnd = !p.dnd) }
-                QuickToggle(Icons.Filled.Fullscreen, "Forçar", p.forceGlobal, hasShell, Modifier.weight(1f)) { p = p.copy(forceGlobal = !p.forceGlobal) }
+                QuickToggle(Icons.Filled.CleaningServices, "Limpar", p.killBackground, modifier = Modifier.weight(1f)) { p = p.copy(killBackground = !p.killBackground) }
             }
-            Hint("Forçar: se o jogo ignorar a resolução, baixa a tela inteira enquanto ele estiver aberto e volta sozinho quando você sair.")
+            Hint("A resolução baixa enquanto o jogo estiver aberto e volta ao normal sozinha quando você sair dele.")
 
             // ---- Avançado
             Row(

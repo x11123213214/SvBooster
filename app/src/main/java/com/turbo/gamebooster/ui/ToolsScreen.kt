@@ -106,15 +106,16 @@ fun ToolsScreen(mode: Shell.Mode) {
         // ---- Limpeza de RAM
         var cleaning by remember { mutableStateOf(false) }
         var cleanMsg by remember { mutableStateOf<String?>(null) }
-        SectionCard("Limpar RAM", Icons.Filled.CleaningServices) {
-            Hint("Fecha processos em segundo plano para liberar memória antes de jogar.")
+        SectionCard("Limpar RAM e cache", Icons.Filled.CleaningServices) {
+            Hint("Fecha apps em segundo plano e apaga o cache temporário de todos os apps (com Modo Turbo).")
             Spacer(Modifier.height(10.dp))
             Button(
                 onClick = {
                     cleaning = true
                     scope.launch {
-                        val mb = Cleaner.clean(ctx)
-                        cleanMsg = if (mb > 0) "$mb MB liberados" else "A memória já estava otimizada"
+                        val r = Cleaner.clean(ctx)
+                        cleanMsg = "RAM: +${r.ramMb} MB livres" +
+                            (if (hasShell) " · Cache: ${r.cacheMb} MB apagados" else " · (cache precisa do Modo Turbo)")
                         cleaning = false
                     }
                 },
@@ -207,11 +208,13 @@ fun ToolsScreen(mode: Shell.Mode) {
         // ---- Tela e sistema
         var animOff by remember { mutableStateOf(Tweaks.animationsOff(ctx)) }
         var maxHz by remember { mutableStateOf(Prefs.maxHzOn(ctx)) }
+        var tweakMsg by remember { mutableStateOf<String?>(null) }
         SectionCard("Tela e sistema", Icons.Filled.ScreenRotation, needShell) {
             ToggleRow("Desligar animações", "Menus e transições instantâneos", animOff, hasShell) { on ->
                 scope.launch {
                     val ok = if (on) Tweaks.disableAnimations(ctx) else Tweaks.restoreAnimations(ctx)
                     if (ok) animOff = on
+                    tweakMsg = if (ok) (if (on) "Animações desligadas ✓" else "Animações restauradas ✓") else "Não deu: ${Tweaks.lastError}"
                 }
             }
             ToggleRow(
@@ -219,8 +222,14 @@ fun ToolsScreen(mode: Shell.Mode) {
                 "Trava a tela em ${Tweaks.maxRefreshRate(ctx).roundToInt()} Hz (gasta mais bateria)",
                 maxHz, hasShell
             ) { on ->
-                scope.launch { if (Tweaks.setMaxRefresh(ctx, on)) maxHz = on }
+                scope.launch {
+                    val ok = Tweaks.setMaxRefresh(ctx, on)
+                    if (ok) maxHz = on
+                    tweakMsg = if (ok) (if (on) "Tela travada em ${Tweaks.maxRefreshRate(ctx).roundToInt()} Hz ✓" else "Taxa automática ✓") else "Não deu: ${Tweaks.lastError}"
+                }
             }
+            tweakMsg?.let { Text(it, color = Cyan, fontSize = 13.sp) }
+            if (Tweaks.maxRefreshRate(ctx) < 61f) Hint("Sua tela informa no máximo 60 Hz, então não há como subir a taxa.")
         }
 
         // ---- Mira

@@ -110,7 +110,7 @@ fun TurboModeCard(tick: Int, onChanged: () -> Unit) {
                 Spacer(Modifier.width(8.dp))
                 Text(
                     when (Shell.mode()) {
-                        Shell.Mode.ADB -> "Ativado pela Depuração por Wi-Fi"
+                        Shell.Mode.ADB -> if (AdbShell.connected) "Conectado pela Depuração por Wi-Fi" else "Pareado (conecta quando precisar)"
                         Shell.Mode.SHIZUKU -> "Ativado pelo Shizuku"
                         else -> "Ativado pelo root"
                     },
@@ -118,6 +118,28 @@ fun TurboModeCard(tick: Int, onChanged: () -> Unit) {
                 )
             }
             Hint("Resolução, FPS, animações e Hz estão liberados.")
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        busy = true
+                        scope.launch { msg = AdbShell.selfTest(); busy = false; onChanged() }
+                    },
+                    enabled = !busy, modifier = Modifier.weight(1f)
+                ) { Text(if (busy) "Testando…" else "Testar") }
+                if (Shell.mode() == Shell.Mode.ADB) OutlinedButton(
+                    onClick = {
+                        busy = true
+                        scope.launch {
+                            msg = if (AdbShell.connect()) "Conectado ✓" else "Não conectou: ${AdbShell.lastError ?: ""}"
+                            busy = false; onChanged()
+                        }
+                    },
+                    enabled = !busy, modifier = Modifier.weight(1f)
+                ) { Text("Reconectar") }
+            }
+            msg?.let { Text(it, color = Cyan, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
+            if (Shell.mode() == Shell.Mode.ADB) Hint("Se o teste falhar: ligue a Depuração por Wi-Fi (Opções do desenvolvedor), fique no Wi-Fi e toque em Reconectar.")
             return@SectionCard
         }
         if (!AdbShell.supported()) {

@@ -44,7 +44,7 @@ object Shell {
     fun mode(): Mode = when {
         shizukuGranted() -> Mode.SHIZUKU
         rootAvailable -> Mode.ROOT
-        AdbShell.connected -> Mode.ADB
+        AdbShell.connected || AdbShell.paired() -> Mode.ADB
         else -> Mode.NONE
     }
 
@@ -62,26 +62,38 @@ object Shell {
         rootAvailable
     }
 
-    /** Roda um ou mais comandos (em sequência, no mesmo shell). */
-    suspend fun run(vararg cmds: String): Result = withContext(Dispatchers.IO) {
+    /**
+     * Roda um ou mais comandos (em sequência, no mesmo shell).
+     * Nunca trava: se passar do tempo limite, desiste e devolve erro.
+     */
+    suspend fun run(vararg cmds: String, timeoutMs: Long = 12_000): Result = withContext(Dispatchers.IO) {
         val script = cmds.joinToString("\n")
-        try {
-            val p: Process = when (mode()) {
-                Mode.SHIZUKU -> newShizukuProcess(arrayOf("sh", "-c", script))
-                Mode.ROOT -> Runtime.getRuntime().exec(arrayOf("su", "-c", script))
-                Mode.ADB -> return@withContext AdbShell.exec(script)
-                Mode.NONE -> return@withContext Result(-1, "", "Modo turbo desativado (aba Ajustes)")
-            }
-            val err = StringBuilder()
-            val t = Thread { err.append(p.errorStream.bufferedReader().readText()) }
-            t.start()
-            val out = p.inputStream.bufferedReader().readText()
-            val code = p.waitFor()
-            t.join(2000)
-            Result(code, out, err.toString())
-        } catch (t: Throwable) {
-            Result(-1, "", t.message ?: t.javaClass.simpleName)
+        when (mode()) {
+            Mode.ADB -> AdbShell.exec(script, timeoutMs)
+            Mode.NONE -> Result(-1, "", "Modo Turbo desativado (aba Ajustes)")
+            Mode.SHIZUKU, Mode.ROOT -> runProcess(script, timeoutMs)
         }
+    }
+
+    private fun runProcess(script: String, timeoutMs: Long): Result {
+        val p: Process = try {
+            if (mode() == Mode.SHIZUKU) newShizukuProcess(arrayOf("sh", "-c", script))
+            else Runtime.getRuntime().exec(arrayOf("su", "-c", script))
+        } catch (t: Throwable) {
+            return Result(-1, "", t.message ?: t.javaClass.simpleName)
+        }
+        val out = StringBuffer()
+        val err = StringBuffer()
+        val tOut = Thread { try { out.append(p.inputStream.bufferedReader().readText()) } catch (_: Throwable) {} }
+        val tErr = Thread { try { err.append(p.errorStream.bufferedReader().readText()) } catch (_: Throwable) {} }
+        tOut.start(); tErr.start()
+        val finished = try { p.waitFor(timeoutMs, TimeUnit.MILLISECONDS) } catch (_: Throwable) { false }
+        if (!finished) {
+            try { p.destroy() } catch (_: Throwable) {}
+            return Result(-2, out.toString(), "Tempo esgotado")
+        }
+        tOut.join(1500); tErr.join(1500)
+        return Result(p.exitValue(), out.toString(), err.toString())
     }
 
     // Shizuku 13 deixou newProcess privado; o acesso por reflexão é o caminho usado pela comunidade.

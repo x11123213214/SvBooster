@@ -25,6 +25,11 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Date
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /** Conexão ADB do próprio app com a Depuração por Wi-Fi do celular. */
 class SvAdbManager(ctx: Context) : AbsAdbConnectionManager() {
@@ -101,7 +106,7 @@ object AdbShell {
 
     suspend fun pair(port: Int, code: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            val ok = m().pair("127.0.0.1", port, code.trim())
+            val ok = withDeadline(15_000) { m().pair("127.0.0.1", port, code.trim()) } ?: false
             if (ok) setPaired(true) else lastError = "Código ou porta incorretos"
             ok
         } catch (e: Throwable) {
@@ -120,12 +125,12 @@ object AdbShell {
                     Settings.Global.putInt(app.contentResolver, "adb_wifi_enabled", 1)
                     delay(2000)
                 }
-                connected = m().connectTls(app, 6000)
+                connected = withDeadline(12_000) { m().connectTls(app, 8000) } ?: false
                 if (connected) {
                     lastError = null
                     // Deixa o app religar a Depuração por Wi-Fi sozinho depois de reiniciar o celular.
                     if (!canToggleWifiAdb()) {
-                        rawExec("pm grant ${app.packageName} android.permission.WRITE_SECURE_SETTINGS")
+                        try { rawExec("pm grant ${app.packageName} android.permission.WRITE_SECURE_SETTINGS", 5000) } catch (_: Throwable) {}
                     }
                 } else lastError = "Ligue a Depuração por Wi-Fi (Opções do desenvolvedor)"
             } catch (e: Throwable) {
@@ -136,28 +141,65 @@ object AdbShell {
         }
     }
 
-    private fun rawExec(script: String): Shell.Result {
-        val q = script.replace("'", "'\\''")
-        val stream = m().openStream("shell:sh -c '$q' 2>&1; echo __RC=\$?")
-        val text = stream.use { s -> s.openInputStream().bufferedReader().readText() }
-        val rcLine = Regex("__RC=(\\d+)\\s*$").find(text)
-        val code = rcLine?.groupValues?.get(1)?.toIntOrNull() ?: -1
-        val out = if (rcLine != null) text.substring(0, rcLine.range.first) else text
-        return Shell.Result(code, out, if (code == 0) "" else out)
+    /** Roda algo bloqueante numa thread separada, com tempo limite. */
+    private fun <T> withDeadline(timeoutMs: Long, onTimeout: () -> Unit = {}, block: () -> T): T? {
+        val task = FutureTask(Callable { block() })
+        val t = Thread(task, "sv-adb")
+        t.isDaemon = true
+        t.start()
+        return try {
+            task.get(timeoutMs, TimeUnit.MILLISECONDS)
+        } catch (e: TimeoutException) {
+            onTimeout(); task.cancel(true); null
+        } catch (e: ExecutionException) {
+            throw e.cause ?: e
+        }
     }
 
-    suspend fun exec(script: String): Shell.Result = withContext(Dispatchers.IO) {
-        if (!connect()) return@withContext Shell.Result(-1, "", lastError ?: "Modo turbo desconectado")
+    /**
+     * Executa via ADB. Não depende do fim da conexão: lê até a linha-marcador com o código de saída.
+     */
+    private fun rawExec(script: String, timeoutMs: Long = 12_000): Shell.Result {
+        val q = script.replace("'", "'\\''")
+        val stream = m().openStream("shell:sh -c '$q' 2>&1; printf '\\n__SVRC=%s\\n' \$?")
+        val res = withDeadline(timeoutMs, onTimeout = { try { stream.close() } catch (_: Throwable) {} }) {
+            val reader = stream.openInputStream().bufferedReader()
+            val sb = StringBuilder()
+            var code = -1
+            while (true) {
+                val line = reader.readLine() ?: break
+                if (line.startsWith("__SVRC=")) {
+                    code = line.removePrefix("__SVRC=").trim().toIntOrNull() ?: -1
+                    break
+                }
+                sb.append(line).append('\n')
+            }
+            try { stream.close() } catch (_: Throwable) {}
+            val out = sb.toString().trimEnd()
+            Shell.Result(code, out, if (code == 0) "" else out)
+        }
+        return res ?: Shell.Result(-2, "", "Tempo esgotado")
+    }
+
+    suspend fun exec(script: String, timeoutMs: Long = 12_000): Shell.Result = withContext(Dispatchers.IO) {
+        if (!connect()) return@withContext Shell.Result(-1, "", lastError ?: "Modo Turbo desconectado")
         try {
-            rawExec(script)
+            val r = rawExec(script, timeoutMs)
+            if (r.code == -2) connected = false // conexão provavelmente caiu
+            r
         } catch (e: Throwable) {
             connected = false
-            // Uma nova tentativa após reconectar.
             if (connect()) try {
-                rawExec(script)
+                rawExec(script, timeoutMs)
             } catch (e2: Throwable) {
                 Shell.Result(-1, "", e2.message ?: "erro")
-            } else Shell.Result(-1, "", e.message ?: "erro")
+            } else Shell.Result(-1, "", lastError ?: e.message ?: "erro")
         }
+    }
+
+    /** Teste rápido para a tela de Ajustes. */
+    suspend fun selfTest(): String {
+        val r = Shell.run("id -un; getprop ro.build.version.release; wm size", timeoutMs = 8000)
+        return if (r.ok) "OK ✓ (${Shell.mode()})\n${r.out.trim()}" else "Falhou (${Shell.mode()}): ${r.err.ifBlank { r.out }.take(300)}"
     }
 }
