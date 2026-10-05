@@ -73,24 +73,32 @@ class WifiAdbTest {
         Thread.sleep(3000)
         Log.i("SvTest", "wifi: " + sh("dumpsys wifi | grep -m1 'mWifiInfo'").take(200))
 
-        // Abre Opções do desenvolvedor → Depuração por Wi-Fi
-        ctx.startActivity(
-            Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        )
-        device.wait(Until.hasObject(By.pkg("com.android.settings").depth(0)), 8000)
-        try {
-            UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("Wireless debugging")
-        } catch (_: Exception) {
-        }
-        device.findObject(By.text("Wireless debugging"))?.click()
-        device.wait(Until.hasObject(By.textContains("Pair device with pairing code")), 6000)
+        // A pergunta "permitir nesta rede?" aparece ao ligar a depuração: responde primeiro.
         allowNetworkIfAsked()
-        // Garante que a chave está ligada.
-        if (!device.hasObject(By.textContains("Pair device with pairing code"))) {
-            device.findObject(By.text("Use wireless debugging"))?.click()
+        Log.i("SvTest", "adb_wifi_enabled=" + sh("settings get global adb_wifi_enabled").trim())
+
+        // Abre Opções do desenvolvedor → Depuração por Wi-Fi (tenta até 3 vezes)
+        for (attempt in 1..3) {
+            if (device.hasObject(By.textContains("Pair device with pairing code"))) break
+            ctx.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            )
+            device.wait(Until.hasObject(By.text("Developer options")), 6000)
             allowNetworkIfAsked()
+            try {
+                UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("Wireless debugging")
+            } catch (_: Exception) {
+            }
+            device.findObject(By.text("Wireless debugging"))?.click()
+            device.wait(Until.hasObject(By.textContains("Pair device with pairing code")), 6000)
+            allowNetworkIfAsked()
+            if (!device.hasObject(By.textContains("Pair device with pairing code"))) {
+                device.findObject(By.text("Use wireless debugging"))?.click()
+                allowNetworkIfAsked()
+                device.wait(Until.hasObject(By.textContains("Pair device with pairing code")), 6000)
+            }
+            Log.i("SvTest", "tentativa $attempt: " + screenTexts().take(12))
         }
-        device.wait(Until.hasObject(By.textContains("Pair device with pairing code")), 8000)
         shot("w1_depuracao_wifi.png")
         device.findObject(By.textContains("Pair device with pairing code"))?.click()
         allowNetworkIfAsked()
