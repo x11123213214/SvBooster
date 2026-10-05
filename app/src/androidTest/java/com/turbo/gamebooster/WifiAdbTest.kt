@@ -79,36 +79,39 @@ class WifiAdbTest {
         Log.i("SvTest", "dev-activities: " + sh("cmd package query-activities --brief -a android.settings.APPLICATION_DEVELOPMENT_SETTINGS").replace("\n", " | "))
         Log.i("SvTest", "wireless-activities: " + sh("dumpsys package com.android.settings | grep -iE 'Wireless|AdbWireless|DEVELOPMENT' | head -20").replace("\n", " | "))
 
-        // Abre Opções do desenvolvedor → Depuração por Wi-Fi (tenta até 3 vezes)
-        for (attempt in 1..3) {
-            if (device.hasObject(By.textContains("Pair device with pairing code"))) break
-            ctx.startActivity(
-                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            )
-            device.wait(Until.hasObject(By.text("Developer options")), 6000)
-            allowNetworkIfAsked()
-            if (!device.hasObject(By.text("Use developer options")) && !device.hasObject(By.text("Wireless debugging"))) {
-                // Caminho manual: Configurações → Sistema → Opções do desenvolvedor
-                try { UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("System") } catch (_: Exception) {}
-                device.findObject(By.text("System"))?.click()
-                device.wait(Until.hasObject(By.textContains("Developer options")), 6000)
-                try { UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("Developer options") } catch (_: Exception) {}
-                device.findObject(By.text("Developer options"))?.click()
-                device.wait(Until.hasObject(By.text("Use developer options")), 6000)
+        // Vai até Opções do desenvolvedor → Depuração por Wi-Fi e liga a chave (como uma pessoa faria)
+        for (attempt in 1..6) {
+            when {
+                device.hasObject(By.textContains("Pair device with pairing code")) -> break
+                device.hasObject(By.text("Use wireless debugging")) -> {
+                    device.findObject(By.text("Use wireless debugging"))?.click()
+                    allowNetworkIfAsked()
+                    device.wait(Until.hasObject(By.textContains("Pair device with pairing code")), 8000)
+                }
+                device.hasObject(By.text("Wireless debugging")) -> {
+                    device.findObject(By.text("Wireless debugging"))?.click()
+                    device.wait(Until.hasObject(By.text("Use wireless debugging")), 6000)
+                }
+                device.hasObject(By.text("Use developer options")) -> {
+                    try { UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("Wireless debugging") } catch (_: Exception) {}
+                }
+                else -> {
+                    ctx.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    )
+                    device.wait(Until.hasObject(By.text("Use developer options")), 6000)
+                    allowNetworkIfAsked()
+                    if (!device.hasObject(By.text("Use developer options"))) {
+                        try { UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("System") } catch (_: Exception) {}
+                        device.findObject(By.text("System"))?.click()
+                        device.wait(Until.hasObject(By.textContains("Developer options")), 6000)
+                        try { UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("Developer options") } catch (_: Exception) {}
+                        device.findObject(By.text("Developer options"))?.click()
+                        device.wait(Until.hasObject(By.text("Use developer options")), 6000)
+                    }
+                }
             }
-            try {
-                UiScrollable(UiSelector().scrollable(true)).scrollTextIntoView("Wireless debugging")
-            } catch (_: Exception) {
-            }
-            device.findObject(By.text("Wireless debugging"))?.click()
-            device.wait(Until.hasObject(By.textContains("Pair device with pairing code")), 6000)
-            allowNetworkIfAsked()
-            if (!device.hasObject(By.textContains("Pair device with pairing code"))) {
-                device.findObject(By.text("Use wireless debugging"))?.click()
-                allowNetworkIfAsked()
-                device.wait(Until.hasObject(By.textContains("Pair device with pairing code")), 6000)
-            }
-            Log.i("SvTest", "tentativa $attempt: " + screenTexts().take(12))
+            Log.i("SvTest", "passo $attempt: " + screenTexts().take(10))
         }
         shot("w1_depuracao_wifi.png")
         device.findObject(By.textContains("Pair device with pairing code"))?.click()
