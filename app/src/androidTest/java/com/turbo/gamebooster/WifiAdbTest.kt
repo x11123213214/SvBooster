@@ -83,6 +83,14 @@ class WifiAdbTest {
         for (attempt in 1..6) {
             when {
                 device.hasObject(By.textContains("Pair device with pairing code")) -> break
+                device.hasObject(By.textContains("IP address")) -> {
+                    // Já está ligada: rola até "Pair device with pairing code"
+                    var n = 0
+                    while (!device.hasObject(By.textContains("Pair device with pairing code")) && n < 10) {
+                        device.swipe(device.displayWidth / 2, device.displayHeight * 3 / 4, device.displayWidth / 2, device.displayHeight / 3, 20)
+                        Thread.sleep(300); n++
+                    }
+                }
                 device.hasObject(By.text("Use wireless debugging")) -> {
                     device.findObject(By.text("Use wireless debugging"))?.click()
                     allowNetworkIfAsked()
