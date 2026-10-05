@@ -46,11 +46,6 @@ object Booster {
     }
 
     private suspend fun applyProfile(ctx: Context, pkg: String, p: GameProfile, log: (String) -> Unit) {
-        if (p.killBackground) {
-            val r = Cleaner.clean(ctx, exclude = pkg)
-            log("Limpeza: +${r.ramMb} MB de RAM" + (if (r.cacheMb > 0) ", ${r.cacheMb} MB de cache" else ""))
-        }
-
         // Testa o Modo Turbo antes de tudo, para não esperar à toa.
         var shell = Shell.hasShell()
         if (shell) {
@@ -62,6 +57,11 @@ object Booster {
             }
         } else if (p.downscale < 1f || p.fps > 0 || p.noAnimations || p.maxRefresh) {
             log("⚠ Modo Turbo desativado: resolução, FPS, animações e Hz foram pulados (ative em Ajustes)")
+        }
+
+        if (p.killBackground) {
+            val r = Cleaner.clean(ctx, exclude = pkg, useShell = shell)
+            log("Limpeza: +${r.ramMb} MB de RAM" + (if (r.cacheMb > 0) ", ${r.cacheMb} MB de cache" else ""))
         }
 
         var watch: String? = null
@@ -139,10 +139,10 @@ object Cleaner {
     }
 
     /** Fecha apps em segundo plano e (com Modo Turbo) limpa o cache de todos os apps. */
-    suspend fun clean(ctx: Context, exclude: String? = null): Res = withContext(Dispatchers.IO) {
+    suspend fun clean(ctx: Context, exclude: String? = null, useShell: Boolean = Shell.hasShell()): Res = withContext(Dispatchers.IO) {
         val ramBefore = SystemInfo.availRamMb(ctx)
         val diskBefore = freeStorageMb()
-        if (Shell.hasShell()) {
+        if (useShell) {
             Shell.run("pm trim-caches 1000G", timeoutMs = 20_000)
             Shell.run("am kill-all", timeoutMs = 8_000)
         }
