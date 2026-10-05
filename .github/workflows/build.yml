@@ -15,7 +15,16 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
       - name: Compilar APK
-        run: chmod +x gradlew && ./gradlew assembleDebug --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew assembleDebug 2>&1 | tee build.log
+      - name: Mostrar erros
+        if: failure()
+        shell: bash
+        run: |
+          grep -E "^e: |error:|Could not|What went wrong|> " build.log | head -40 | while IFS= read -r l; do echo "::error::${l:0:900}"; done
       - name: Renomear
         run: cp app/build/outputs/apk/debug/app-debug.apk SvBooster.apk
       - uses: actions/upload-artifact@v4
