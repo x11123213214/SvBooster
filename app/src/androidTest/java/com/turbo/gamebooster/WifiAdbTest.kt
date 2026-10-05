@@ -84,6 +84,7 @@ class WifiAdbTest {
         Thread.sleep(1000)
         device.pressHome()
         Thread.sleep(1000)
+        sh("cmd statusbar collapse")
 
         // A pergunta "permitir nesta rede?" aparece ao ligar a depuração: responde primeiro.
         allowNetworkIfAsked()
@@ -94,7 +95,7 @@ class WifiAdbTest {
         // Vai até Opções do desenvolvedor → Depuração por Wi-Fi e liga a chave (como uma pessoa faria)
         for (attempt in 1..8) {
             if (device.hasObject(By.text("Flashlight")) || device.hasObject(By.text("Manage"))) {
-                device.pressBack(); Thread.sleep(600) // fecha a cortina de notificações se abriu
+                sh("cmd statusbar collapse"); Thread.sleep(800) // fecha a cortina de notificações se abriu
             }
             when {
                 device.hasObject(By.textContains("Pair device with pairing code")) -> break
@@ -149,6 +150,11 @@ class WifiAdbTest {
         Thread.sleep(1500)
         shot("w2_codigo_pareamento.png")
 
+        if (!device.hasObject(By.textContains("pairing code"))) {
+            sh("cmd statusbar collapse"); Thread.sleep(800)
+            device.findObject(By.textContains("Pair device with pairing code"))?.click()
+            device.wait(Until.hasObject(By.textContains("pairing code")), 6000)
+        }
         val texts = screenTexts()
         Log.i("SvTest", "tela: $texts")
         val code = texts.firstNotNullOfOrNull { Regex("^\\d{6}$").find(it.trim())?.value }
